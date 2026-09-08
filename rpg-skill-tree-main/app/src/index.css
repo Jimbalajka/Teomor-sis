@@ -1,0 +1,1078 @@
+:root {
+  --bg: #0b0e14;
+  --panel: #141a24;
+  --panel-2: #1b2330;
+  --border: #2b3444;
+  --text: #e5e7eb;
+  --muted: #8b95a7;
+
+  --z-magic: #3b82f6;
+  --z-strength: #ef4444;
+  --z-dexterity: #22c55e;
+  --z-wisdom: #f59e0b;
+  --z-center: #cbd5e1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* ── Canvas ─────────────────────────────────────────── */
+.canvas {
+  flex: 1;
+  position: relative;
+  background:
+    radial-gradient(circle at 50% 45%, #10151f 0%, #070a0f 70%);
+}
+
+/* ── Nodes ──────────────────────────────────────────── */
+.node {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  border: 2px solid var(--border);
+  background: var(--panel-2);
+  position: relative;
+  user-select: none;
+}
+.node:hover {
+  transform: scale(1.08);
+  z-index: 20;
+}
+.node-label {
+  font-size: 11px;
+  line-height: 1.15;
+  font-weight: 600;
+  padding: 0 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.node-level {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.node-root {
+  width: 64px;
+  height: 64px;
+  background: #fff;
+  border-color: #fff;
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.7);
+  animation: pulse 2.2s ease-in-out infinite;
+}
+.node-root .node-label {
+  color: #0b0e14;
+}
+.node-spec {
+  width: 100px;
+  height: 100px;
+}
+
+/* Транзитные узлы — мелкие (их много). */
+.node-transit {
+  width: 58px;
+  height: 58px;
+}
+.node-transit .node-label {
+  font-size: 9px;
+}
+
+/* Слоты Черт (слева) и Ремёсел (справа) — квадратные, особый цвет. */
+.node-featslot,
+.node-craftslot {
+  border-radius: 12px;
+  width: 84px;
+  height: 64px;
+}
+.node-featslot {
+  --zc: #a78bfa; /* фиолетовый — Черты */
+}
+.node-craftslot {
+  --zc: #f59e0b; /* янтарный — Ремёсла */
+}
+.node-featslot.status-available,
+.node-craftslot.status-available,
+.node-featslot.status-unlocked,
+.node-craftslot.status-unlocked {
+  border-color: var(--zc);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--zc) 55%, transparent);
+}
+
+/* Черты/способности — не круг, а скошенный квадрат (визуально отличаются). */
+.node-feat {
+  border-radius: 14px;
+  width: 96px;
+  height: 76px;
+  transform: rotate(0deg);
+}
+.node-feat.status-unlocked,
+.node-feat.status-available {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--zc) 60%, transparent);
+}
+.node-feat .node-label {
+  font-size: 10px;
+}
+
+/* Zone accent colours (applied when available/unlocked) */
+.zone-magic {
+  --zc: var(--z-magic);
+}
+.zone-strength {
+  --zc: var(--z-strength);
+}
+.zone-dexterity {
+  --zc: var(--z-dexterity);
+}
+.zone-wisdom {
+  --zc: var(--z-wisdom);
+}
+.zone-center {
+  --zc: var(--z-center);
+}
+
+/* Status: locked */
+.status-locked {
+  opacity: 0.55;
+  filter: grayscale(0.6);
+  border-style: dashed;
+}
+.status-locked.node-root {
+  opacity: 1;
+  filter: none;
+}
+
+/* Status: available */
+.status-available {
+  border-color: var(--zc);
+  color: #fff;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--zc) 60%, transparent);
+  animation: pulse-zone 1.8s ease-in-out infinite;
+}
+
+/* Status: unlocked */
+.status-unlocked {
+  border-color: var(--zc);
+  border-width: 4px;
+  background: color-mix(in srgb, var(--zc) 22%, var(--panel-2));
+  color: #fff;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--zc) 55%, transparent);
+}
+
+.node-secret .node-label {
+  font-size: 26px;
+  color: var(--muted);
+}
+
+.handle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 18px rgba(255, 255, 255, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.95);
+  }
+}
+@keyframes pulse-zone {
+  0%,
+  100% {
+    box-shadow: 0 0 10px color-mix(in srgb, var(--zc) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--zc) 80%, transparent);
+  }
+}
+
+/* ── Tooltip ────────────────────────────────────────── */
+.tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 10px;
+  width: 220px;
+  padding: 10px 12px;
+  background: #0b0e14;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  font-size: 12px;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 50;
+}
+.node:hover .tooltip {
+  opacity: 1;
+}
+.tooltip-title {
+  display: block;
+  margin-bottom: 4px;
+  color: #fff;
+}
+.tooltip-desc {
+  margin: 0 0 6px;
+  color: var(--muted);
+}
+.tooltip-stats {
+  margin: 0 0 6px;
+  padding-left: 16px;
+  color: #a7f3d0;
+}
+.tooltip-cost {
+  color: #fcd34d;
+}
+.tooltip-reason {
+  margin-top: 4px;
+  color: #f87171;
+}
+.tooltip-action {
+  margin-top: 4px;
+  color: #86efac;
+  font-weight: 600;
+}
+.tooltip-secret {
+  margin: 0;
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+/* ── Sidebar ────────────────────────────────────────── */
+.sidebar {
+  width: 300px;
+  min-width: 300px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sidebar-title {
+  font-size: 18px;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+.panel {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+.panel h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+.economy {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.econ-pill {
+  flex: 1;
+  border-radius: 10px;
+  padding: 8px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+.econ-or {
+  background: color-mix(in srgb, var(--z-wisdom) 20%, var(--panel));
+}
+.econ-transit {
+  background: color-mix(in srgb, var(--z-magic) 20%, var(--panel));
+}
+.econ-num {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+}
+.econ-cap {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.spec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.spec-row:last-child {
+  border-bottom: none;
+}
+.spec-name {
+  display: block;
+  font-weight: 600;
+  color: var(--zc);
+}
+.spec-dar {
+  font-size: 11px;
+  color: var(--muted);
+}
+.spec-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.spec-level {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.stat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.stat-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.stat-val {
+  color: #86efac;
+  font-weight: 700;
+}
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+/* ── Buttons ────────────────────────────────────────── */
+.btn {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+.btn:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-primary {
+  width: 100%;
+  background: color-mix(in srgb, var(--z-magic) 30%, var(--panel));
+}
+.btn-mini {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.btn-danger {
+  background: color-mix(in srgb, var(--z-strength) 25%, var(--panel));
+}
+
+/* ── React Flow wrapper + editor handles ────────────── */
+.rf-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+/* Хэндлы связей видны только в режиме редактора. */
+.react-flow__handle {
+  opacity: 0;
+  width: 10px;
+  height: 10px;
+  background: #e5e7eb;
+  border: 2px solid #0b0e14;
+}
+.rf-edit .react-flow__handle {
+  opacity: 1;
+}
+.rf-edit .node {
+  cursor: grab;
+}
+
+/* ── Editor form ────────────────────────────────────── */
+.editor {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 270px;
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  z-index: 30;
+}
+.editor-top {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.editor-top .btn {
+  flex: 1;
+  padding: 6px;
+  font-size: 12px;
+}
+.editor-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+.editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.editor-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.editor-form input,
+.editor-form select,
+.editor-form textarea {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.editor-row {
+  display: flex;
+  gap: 8px;
+}
+.editor-row label {
+  flex: 1;
+}
+.editor-check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+  color: var(--text) !important;
+  font-size: 13px !important;
+}
+.editor-check input {
+  width: auto;
+}
+.editor-id {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+/* ── Race modal ─────────────────────────────────────── */
+.char-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 920px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal-title {
+  margin: 0 0 4px;
+}
+.modal-sub {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.race-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.race-card {
+  text-align: left;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.race-card:hover {
+  border-color: var(--z-magic);
+  transform: translateY(-2px);
+}
+.race-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.race-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+.race-speed {
+  font-size: 11px;
+  color: var(--muted);
+}
+.race-blurb {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.race-abilities {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+}
+.race-abilities li {
+  margin-bottom: 3px;
+}
+.race-choice-hint {
+  color: var(--z-wisdom);
+}
+.choices-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.choice-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.choice-row select {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 14px;
+}
+
+/* ── View tabs ──────────────────────────────────────── */
+.view-tabs {
+  display: flex;
+  gap: 6px;
+}
+.view-tabs .btn {
+  flex: 1;
+}
+
+/* ── Character sheet ────────────────────────────────── */
+.sheet {
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px;
+}
+.sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.sheet-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.sheet-name input {
+  font-size: 18px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 10px;
+  min-width: 220px;
+}
+.sheet-meta {
+  display: flex;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.sheet-derived-choices {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.derived-line {
+  font-size: 13px;
+}
+.derived-line b {
+  color: var(--muted);
+}
+.sheet-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+.sheet-col {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--zc, var(--border));
+  border-radius: 10px;
+  padding: 10px;
+}
+.sheet-char {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.sheet-char-name {
+  font-weight: 700;
+  color: var(--zc, var(--text));
+}
+.sheet-char-val {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.sheet-skills {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sheet-skills li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+.sheet-skill-name {
+  font-size: 13px;
+}
+.skill-tree-bonus {
+  color: #86efac;
+  font-size: 11px;
+}
+.char-capped {
+  color: #fbbf24;
+  font-size: 12px;
+}
+.sheet-skill-in {
+  width: 46px;
+  text-align: center;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 3px;
+}
+.sheet-derived {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+.sheet-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.sheet-field input {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 5px;
+}
+.sheet-blocks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.sheet-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.sheet-block textarea {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+/* ── Cards view ─────────────────────────────────────── */
+.cards-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cards-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.cards-cats,
+.cards-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.btn-mini2 {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.cards-main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.cards-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+.card-editor {
+  width: 300px;
+  min-width: 300px;
+  border-left: 1px solid var(--border);
+  padding: 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--panel);
+}
+.card-editor h3 {
+  margin: 0 0 4px;
+}
+.card-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.card-editor input,
+.card-editor select,
+.card-editor textarea {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.ed-row {
+  display: flex;
+  gap: 8px;
+}
+.ed-row label {
+  flex: 1;
+}
+.card-editor-preview {
+  margin-top: 6px;
+}
+
+/* Конструктор всплывающих окон в редакторе узлов */
+.choice-builder {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cb-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+.cb-item {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Card tile (в духе концепта: козырёк + тело) */
+.card-tile {
+  background: #f4f4f0;
+  color: #14181f;
+  border: 2px solid #14181f;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  display: flex;
+  flex-direction: column;
+}
+.card-tile:hover {
+  transform: translateY(-2px);
+}
+.card-selected {
+  box-shadow: 0 0 0 3px var(--z-magic);
+}
+.card-brow {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 2px solid #14181f;
+  font-weight: 700;
+}
+.card-cost {
+  background: #14181f;
+  color: #fff;
+  padding: 6px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.card-name {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+.card-cat {
+  padding: 6px 8px;
+  font-size: 10px;
+  color: #4b5563;
+  align-self: center;
+}
+.card-params {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-bottom: 1px solid #cbd2dc;
+  font-weight: 600;
+}
+.card-body {
+  padding: 8px;
+  font-size: 12px;
+  flex: 1;
+  line-height: 1.3;
+}
+.card-prof {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #6b7280;
+  border-top: 1px solid #cbd2dc;
+}
+/* Цветная левая грань по категории */
+.cat-kvel {
+  border-left: 6px solid var(--z-wisdom);
+}
+.cat-aspect {
+  border-left: 6px solid var(--z-magic);
+}
+.cat-sigil {
+  border-left: 6px solid var(--z-dexterity);
+}
+.cat-instrument {
+  border-left: 6px solid #9ca3af;
+}
+
+/* ── Choice modal (движок попапов) ──────────────────── */
+.choice-block {
+  margin-bottom: 14px;
+}
+.choice-head {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+.choice-count {
+  color: var(--muted);
+  font-weight: 400;
+}
+.choice-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.choice-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.choice-opt:hover {
+  border-color: var(--z-magic);
+}
+.choice-opt-on {
+  border-color: var(--z-dexterity);
+  background: color-mix(in srgb, var(--z-dexterity) 22%, var(--panel-2));
+}
+.choice-opt-label {
+  font-weight: 600;
+  font-size: 13px;
+}
+.choice-opt-desc {
+  font-size: 11px;
+  color: var(--muted);
+}
+.choice-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* ── Tree cards + rules panel (в Картах) ────────────── */
+.tree-cards {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+.tree-cards-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.rules-panel {
+  border-top: 1px solid var(--border);
+  padding: 12px 16px 24px;
+}
+.rules-toggle {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.rules-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+.rules-sec {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.rules-sec h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--z-magic);
+}
+.rules-sec ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.rules-sec li {
+  margin-bottom: 3px;
+}
+
+/* Карты — общий скролл-контейнер (grid + tree + rules) */
+.cards-view {
+  overflow-y: auto;
+}
+
+/* ── Mobile ─────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .app {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    min-width: 0;
+    max-height: 42vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .canvas {
+    flex: 1;
+  }
+}
