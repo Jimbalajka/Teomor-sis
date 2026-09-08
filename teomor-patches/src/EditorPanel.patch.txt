@@ -1,0 +1,23 @@
+// В EditorPanel.tsx:
+
+// 1) Убери CostType из import если только OR
+// 2) newNode cost:
+      cost: { type: 'OR', amount: 1 },
+
+// 3) Замени блок «Валюта + Цена» на одно поле:
+
+          <label>
+            Цена (ОР)
+            <input
+              type="number"
+              min={0}
+              value={node.cost.amount}
+              onChange={(e) =>
+                patch(node.id, {
+                  cost: { type: 'OR', amount: Number(e.target.value) },
+                })
+              }
+            />
+          </label>
+
+// 4) Удали select с option transit / ОУ / ОО
