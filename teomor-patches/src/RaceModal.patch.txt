@@ -1,0 +1,7 @@
+// В RaceModal.tsx — шаг 1, текст:
+
+            <p className="modal-sub">
+              Выбери расу. Получишь её особенности, {TREE_ECONOMY.startOrPoints} ОР и 1 уровень.
+            </p>
+
+// import { TREE_ECONOMY } from './treeEconomy';

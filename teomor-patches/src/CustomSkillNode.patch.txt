@@ -1,0 +1,9 @@
+// В CustomSkillNode.tsx — замени блок tooltip-cost:
+
+            {node.category !== 'root' && (
+              <div className="tooltip-cost">
+                Стоимость: {node.cost.amount} ОР
+              </div>
+            )}
+
+// Убери ветку node.cost.type === 'OR' ? 'ОУ' : 'ОО'
