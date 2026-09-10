@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSkillTree } from './SkillTreeContext';
 import { raceById } from './races';
 import type { ZoneType } from './types';
-import type { View } from './App';
+import type { View } from './views';
 import { TREE_ECONOMY } from './treeEconomy';
 import { auraHint } from './coreRules';
 import { applyPlaytestCatalog } from './cardsData';
