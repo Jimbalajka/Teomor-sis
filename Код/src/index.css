@@ -99,14 +99,23 @@ body {
   color: #0b0e14;
 }
 .node-spec {
-  width: 100px;
-  height: 100px;
+  width: 88px;
+  height: 88px;
+  border-radius: 10px;
+  transform: rotate(45deg);
+}
+.node-spec .node-label {
+  transform: rotate(-45deg);
+  max-width: 62px;
+}
+.node-spec.node-diamond {
+  box-shadow: 0 0 18px color-mix(in srgb, var(--zc) 55%, transparent);
 }
 
 /* Транзитные узлы — мелкие (их много). */
 .node-transit {
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
 }
 .node-transit .node-label {
   font-size: 9px;
@@ -291,15 +300,19 @@ body {
   display: flex;
   flex-direction: column;
 }
+.sidebar-scroll > * + * {
+  margin-top: 14px;
+}
 .sidebar-scroll {
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
-  overflow-y: auto;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: scroll;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: block;
 }
 .sidebar-footer {
   flex-shrink: 0;
@@ -1718,7 +1731,7 @@ body {
 /* ── Сворачиваемые секции сайдбара ── */
 .sidebar-section {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 .sidebar-section-head {
   width: 100%;
@@ -1814,7 +1827,7 @@ body {
 /* ── Сворачиваемые секции сайдбара ── */
 .sidebar-section {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 .sidebar-section-head {
   width: 100%;

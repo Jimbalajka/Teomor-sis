@@ -51,7 +51,7 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-scroll">
+      <div className="sidebar-scroll" onWheel={(e) => e.stopPropagation()}>
       <h1 className="sidebar-title">Теомор</h1>
 
       <div className="view-tabs">
@@ -182,7 +182,7 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
         </Section>
       )}
 
-      <Section title="Дары" defaultOpen={false}>
+      <Section title="Дары" defaultOpen={true}>
         {ZONES.map(({ zone, dar, branch }) => {
           const level = state.specializationLevels[zone] ?? 0;
           const opened = level >= 1;
