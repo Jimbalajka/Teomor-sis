@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   CATEGORY_LABEL,
-  initialCards,
+  loadCatalogFromStorage,
+  resetCatalogToDefault,
+  saveCatalogToStorage,
   type CardCategory,
   type GameCard,
 } from './cardsData';
@@ -10,8 +12,6 @@ import { CardConstructor } from './CardConstructor';
 import { RulesPanel } from './RulesPanel';
 import { useSkillTree } from './SkillTreeContext';
 import type { ZoneType } from './types';
-
-const LS_CARDS = 'teomor_cards_v1';
 
 const BRANCH_GEN: Record<ZoneType, string> = {
   magic: 'Магии',
@@ -22,21 +22,6 @@ const BRANCH_GEN: Record<ZoneType, string> = {
 };
 
 type CardsMode = 'collection' | 'constructor';
-
-function loadCards(): GameCard[] {
-  try {
-    const raw = localStorage.getItem(LS_CARDS);
-    if (!raw) return initialCards;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return initialCards;
-    return parsed.map((c: GameCard & { osLimit?: number }) => ({
-      ...c,
-      fatigueMax: c.fatigueMax ?? c.osLimit,
-    }));
-  } catch {
-    return initialCards;
-  }
-}
 
 const CATS: (CardCategory | 'all')[] = [
   'all',
@@ -115,7 +100,7 @@ function buildTreeCards(
 
 export function CardsView() {
   const { state, treeData } = useSkillTree();
-  const [cards, setCards] = useState<GameCard[]>(loadCards);
+  const [cards, setCards] = useState<GameCard[]>(loadCatalogFromStorage);
   const [mode, setMode] = useState<CardsMode>('collection');
   const [filter, setFilter] = useState<CardCategory | 'all'>('all');
   const [selId, setSelId] = useState<string | null>(null);
@@ -124,8 +109,14 @@ export function CardsView() {
   const treeCards = buildTreeCards(state, treeData);
 
   useEffect(() => {
-    localStorage.setItem(LS_CARDS, JSON.stringify(cards));
+    saveCatalogToStorage(cards);
   }, [cards]);
+
+  useEffect(() => {
+    const refresh = () => setCards(loadCatalogFromStorage());
+    window.addEventListener('teomor-catalog-updated', refresh);
+    return () => window.removeEventListener('teomor-catalog-updated', refresh);
+  }, []);
 
   const sel = cards.find((c) => c.id === selId) ?? null;
   const editBuild = cards.find((c) => c.id === editBuildId) ?? null;
@@ -256,6 +247,18 @@ export function CardsView() {
               + Приём
             </button>
           )}
+          <button
+            className="btn"
+            onClick={() => setCards(resetCatalogToDefault())}
+          >
+            Сброс справочника
+          </button>
+          <button
+            className="btn"
+            onClick={() => setCards(resetCatalogToDefault())}
+          >
+            Сброс справочника
+          </button>
           <button className="btn" onClick={exportJson}>
             Экспорт
           </button>

@@ -5,8 +5,9 @@ import { SkillTree } from './SkillTree';
 import { Sidebar } from './Sidebar';
 import { CharacterSheet } from './CharacterSheet';
 import { CardsView } from './CardsView';
+import { ConstructorView } from './ConstructorView';
 
-export type View = 'tree' | 'sheet' | 'cards';
+export type View = 'tree' | 'sheet' | 'cards' | 'constructor';
 
 export default function App() {
   const [editMode, setEditMode] = useState(false);
@@ -29,6 +30,7 @@ export default function App() {
           )}
           {view === 'sheet' && <CharacterSheet />}
           {view === 'cards' && <CardsView />}
+          {view === 'constructor' && <ConstructorView />}
         </main>
       </div>
     </SkillTreeProvider>
