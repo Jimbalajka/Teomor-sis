@@ -52,7 +52,7 @@ type Action =
   | { type: 'CHOOSE_RACE'; raceId: string }
   | { type: 'SET_RACE_CHOICE'; choiceId: string; value: string }
   | { type: 'CHOOSE_BACKGROUND'; backgroundId: string }
-  | { type: 'ALLOCATE_NODE'; node: SkillNode; choices?: Record<string, string[]> }
+  | { type: 'ALLOCATE_NODE'; node: SkillNode; choices?: Record<string, string[]>; treeData?: { nodes: SkillNode[] } }
   | { type: 'SET_NODE_CHOICE'; nodeId: string; optionIds: string[] }
   | { type: 'UPGRADE_SPECIALIZATION'; zone: ZoneType }
   | { type: 'DISCOVER_SECRET'; id: string }
@@ -109,7 +109,7 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
 
     case 'ALLOCATE_NODE': {
       const { node } = action;
-      if (blockReason(node, state) !== null) return state;
+      if (blockReason(node, state, action.treeData) !== null) return state;
       const specializationLevels =
         node.category === 'specialization'
           ? {

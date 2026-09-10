@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { SkillNode, SkillTreeData, SkillTreeState, ZoneType } from './types';
+import type { PlaytestPreset } from './playtestPresets';
 import { migrateLegacyPoints } from './types';
 import { initialSkillTree } from './skillTreeData';
 import { blockReason } from './nodeStatus';
@@ -41,6 +42,8 @@ const defaultState: SkillTreeState = {
   orPoints: 0,
   combat: defaultCombatState(0, {}),
   armorBonus: 0,
+  manualModifiers: {},
+  proficiencies: [],
   discoveredSecrets: [],
   nodeChoices: {},
 };
@@ -49,7 +52,7 @@ type Action =
   | { type: 'CHOOSE_RACE'; raceId: string }
   | { type: 'SET_RACE_CHOICE'; choiceId: string; value: string }
   | { type: 'CHOOSE_BACKGROUND'; backgroundId: string }
-  | { type: 'ALLOCATE_NODE'; node: SkillNode; choices?: Record<string, string[]> }
+  | { type: 'ALLOCATE_NODE'; node: SkillNode; choices?: Record<string, string[]>; treeData?: { nodes: SkillNode[] } }
   | { type: 'SET_NODE_CHOICE'; nodeId: string; optionIds: string[] }
   | { type: 'UPGRADE_SPECIALIZATION'; zone: ZoneType }
   | { type: 'DISCOVER_SECRET'; id: string }
@@ -60,8 +63,10 @@ type Action =
   | { type: 'ADD_FATIGUE'; amount: number }
   | { type: 'CLEAR_FATIGUE'; amount?: number }
   | { type: 'REST' }
+  | { type: 'SET_COMBAT'; combat: Partial<CombatState> }
   | { type: 'SYNC_COMBAT_LIMITS'; combat: Pick<CombatState, 'woundsMax' | 'fatigueMax'> }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  | { type: 'LOAD_PLAYTEST_PRESET'; preset: PlaytestPreset };
 
 function clampCombat(
   combat: CombatState,
@@ -104,7 +109,7 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
 
     case 'ALLOCATE_NODE': {
       const { node } = action;
-      if (blockReason(node, state) !== null) return state;
+      if (blockReason(node, state, action.treeData) !== null) return state;
       const specializationLevels =
         node.category === 'specialization'
           ? {
@@ -153,13 +158,20 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
       };
     }
 
-    case 'GAIN_LEVEL':
+    case 'GAIN_LEVEL': {
       if (state.level < 1) return state;
+      const level = state.level + 1;
+      const limits = {
+        woundsMax: computeWoundsMax(level, {}),
+        fatigueMax: computeFatigueMax(level, {}),
+      };
       return {
         ...state,
-        level: state.level + 1,
+        level,
         orPoints: state.orPoints + TREE_ECONOMY.orPerLevel,
+        combat: clampCombat(state.combat, limits),
       };
+    }
 
     case 'SET_ARMOR_BONUS':
       return { ...state, armorBonus: Math.max(0, action.value) };
@@ -215,11 +227,52 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
         combat: { ...state.combat, wounds: 0, fatigue: 0 },
       };
 
+    case 'SET_COMBAT': {
+      const merged = { ...state.combat, ...action.combat };
+      return {
+        ...state,
+        combat: clampCombat(merged, {
+          woundsMax: merged.woundsMax,
+          fatigueMax: merged.fatigueMax,
+        }),
+      };
+    }
+
     case 'SYNC_COMBAT_LIMITS':
       return {
         ...state,
         combat: clampCombat(state.combat, action.combat),
       };
+
+    case 'LOAD_PLAYTEST_PRESET': {
+      const p = action.preset;
+      const specLevels = {
+        ...defaultState.specializationLevels,
+        ...p.specializationLevels,
+      };
+      const manual = p.manualModifiers ?? {};
+      const next: SkillTreeState = {
+        ...defaultState,
+        level: p.level,
+        race: p.race,
+        background: p.background ?? null,
+        allocatedNodes: [...p.allocatedNodes],
+        specializationLevels: specLevels,
+        orPoints: p.orPoints,
+        manualModifiers: manual,
+        proficiencies: p.proficiencies ?? [],
+        combat: defaultCombatState(p.level, manual),
+        armorBonus: p.armorBonus ?? 0,
+        discoveredSecrets: [],
+        nodeChoices: p.nodeChoices ?? {},
+        raceChoices: {},
+      };
+      if (p.sheetFields) {
+        localStorage.setItem('teomor_sheet_v1', JSON.stringify(p.sheetFields));
+        window.dispatchEvent(new Event('teomor-sheet-updated'));
+      }
+      return next;
+    }
 
     case 'RESET':
       return defaultState;
@@ -262,11 +315,22 @@ function loadState(): SkillTreeState {
     const armorBonus =
       typeof parsed.armorBonus === 'number' ? parsed.armorBonus : 0;
     return {
-      ...defaultState,
-      ...parsed,
+      level,
+      race: parsed.race ?? defaultState.race,
+      background: parsed.background ?? defaultState.background,
+      raceChoices: parsed.raceChoices ?? defaultState.raceChoices,
+      allocatedNodes: parsed.allocatedNodes ?? defaultState.allocatedNodes,
+      specializationLevels: {
+        ...defaultState.specializationLevels,
+        ...(parsed.specializationLevels ?? {}),
+      },
       orPoints,
       combat,
       armorBonus,
+      manualModifiers: parsed.manualModifiers ?? defaultState.manualModifiers,
+      proficiencies: parsed.proficiencies ?? defaultState.proficiencies,
+      discoveredSecrets: parsed.discoveredSecrets ?? defaultState.discoveredSecrets,
+      nodeChoices: parsed.nodeChoices ?? defaultState.nodeChoices,
     };
   } catch {
     return defaultState;
@@ -278,12 +342,28 @@ function loadTree(): SkillTreeData {
     const raw = localStorage.getItem(LS_DATA);
     if (!raw) return initialSkillTree;
     const parsed = JSON.parse(raw) as SkillTreeData;
-    if (parsed?.nodes && parsed?.edges) return parsed;
+    if (parsed?.nodes && parsed?.edges) {
+      return {
+        ...parsed,
+        nodes: parsed.nodes.map((n) => ({
+          ...n,
+          cost: { type: 'OR' as const, amount: n.cost?.amount ?? 1 },
+        })),
+      };
+    }
     return initialSkillTree;
   } catch {
     return initialSkillTree;
   }
 }
+
+/** Ощутимый бонус за уровень Дара (1–10): +1 к ключевой характеристике за каждый уровень. */
+const DAR_LEVEL_STAT: Partial<Record<ZoneType, string>> = {
+  magic: 'Разум',
+  strength: 'Мощь',
+  dexterity: 'Моторика',
+  wisdom: 'Стержень',
+};
 
 function computeTotals(
   state: SkillTreeState,
@@ -306,11 +386,21 @@ function computeTotals(
       }
     }
   }
+  for (const [stat, val] of Object.entries(state.manualModifiers ?? {})) {
+    totals[stat] = (totals[stat] ?? 0) + val;
+  }
   for (const id of state.allocatedNodes) {
     const node = treeData.nodes.find((n) => n.id === id);
     if (!node?.statModifiers) continue;
     for (const [stat, val] of Object.entries(node.statModifiers)) {
       totals[stat] = (totals[stat] ?? 0) + val;
+    }
+  }
+  for (const [zone, stat] of Object.entries(DAR_LEVEL_STAT) as [ZoneType, string][]) {
+    const darLvl = state.specializationLevels[zone] ?? 0;
+    if (darLvl > 0 && stat) {
+      totals[stat] = (totals[stat] ?? 0) + darLvl;
+      totals['Усталость'] = (totals['Усталость'] ?? 0) + Math.floor(darLvl / 3);
     }
   }
   return totals;

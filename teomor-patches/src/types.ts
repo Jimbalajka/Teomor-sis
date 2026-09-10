@@ -25,6 +25,12 @@ export type NodeStatus = 'locked' | 'available' | 'unlocked';
 /** Валюта прокачки узла — одна: ОР (Очко Развития). */
 export type CostType = 'OR';
 
+/** Старые сохранения: transit / development → ОР. */
+export function normalizeCostType(type: unknown): CostType {
+  if (type === 'OR' || type === 'transit' || type === 'development') return 'OR';
+  return 'OR';
+}
+
 export interface SkillNode {
   id: string;
   x: number;
@@ -45,6 +51,8 @@ export interface SkillNode {
   choices?: NodeChoice[];
   statModifiers?: Record<string, number>;
   description?: string;
+  /** Только один узел из группы может быть изучен (развилка билда). */
+  exclusiveGroup?: string;
 }
 
 export interface NodeChoiceOption {
@@ -101,6 +109,10 @@ export interface SkillTreeState {
   combat: CombatState;
   /** Бонус брони вручную (щит, доспех); Уклонение — из древа. */
   armorBonus: number;
+  /** Бонусы с листа / пресета (не из древа). */
+  manualModifiers: Record<string, number>;
+  /** Владения и прочее текстом. */
+  proficiencies: string[];
   discoveredSecrets: string[];
   nodeChoices: Record<string, string[]>;
 }

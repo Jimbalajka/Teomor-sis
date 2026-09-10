@@ -99,7 +99,7 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         if (node.choices && node.choices.length > 0) {
           setChoiceNode(node); // открыть всплывающее окно выбора
         } else {
-          dispatch({ type: 'ALLOCATE_NODE', node });
+          dispatch({ type: 'ALLOCATE_NODE', node, treeData });
         }
       }
     },
