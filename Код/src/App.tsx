@@ -6,8 +6,9 @@ import { Sidebar } from './Sidebar';
 import { CharacterSheet } from './CharacterSheet';
 import { CardsView } from './CardsView';
 import { ConstructorView } from './ConstructorView';
+import type { View } from './views';
 
-export type View = 'tree' | 'sheet' | 'cards' | 'constructor';
+export type { View } from './views';
 
 export default function App() {
   const [editMode, setEditMode] = useState(false);

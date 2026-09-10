@@ -155,13 +155,20 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
       };
     }
 
-    case 'GAIN_LEVEL':
+    case 'GAIN_LEVEL': {
       if (state.level < 1) return state;
+      const level = state.level + 1;
+      const limits = {
+        woundsMax: computeWoundsMax(level, {}),
+        fatigueMax: computeFatigueMax(level, {}),
+      };
       return {
         ...state,
-        level: state.level + 1,
+        level,
         orPoints: state.orPoints + TREE_ECONOMY.orPerLevel,
+        combat: clampCombat(state.combat, limits),
       };
+    }
 
     case 'SET_ARMOR_BONUS':
       return { ...state, armorBonus: Math.max(0, action.value) };
@@ -287,11 +294,20 @@ function loadState(): SkillTreeState {
     const armorBonus =
       typeof parsed.armorBonus === 'number' ? parsed.armorBonus : 0;
     return {
-      ...defaultState,
-      ...parsed,
+      level,
+      race: parsed.race ?? defaultState.race,
+      background: parsed.background ?? defaultState.background,
+      raceChoices: parsed.raceChoices ?? defaultState.raceChoices,
+      allocatedNodes: parsed.allocatedNodes ?? defaultState.allocatedNodes,
+      specializationLevels: {
+        ...defaultState.specializationLevels,
+        ...(parsed.specializationLevels ?? {}),
+      },
       orPoints,
       combat,
       armorBonus,
+      discoveredSecrets: parsed.discoveredSecrets ?? defaultState.discoveredSecrets,
+      nodeChoices: parsed.nodeChoices ?? defaultState.nodeChoices,
     };
   } catch {
     return defaultState;
