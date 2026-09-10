@@ -38,6 +38,31 @@ body {
 }
 
 /* ── Canvas ─────────────────────────────────────────── */
+
+/* Древо: фон экрана фиксирован — не ездит при pan/zoom */
+.canvas-tree {
+  position: relative;
+  background: radial-gradient(circle at 50% 48%, #0e1219 0%, #070a0f 78%) !important;
+}
+.canvas-tree::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.55;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--z-magic) 7%, transparent) 0 25%, transparent 25%),
+    linear-gradient(225deg, color-mix(in srgb, var(--z-strength) 7%, transparent) 0 25%, transparent 25%),
+    linear-gradient(45deg, color-mix(in srgb, var(--z-dexterity) 7%, transparent) 0 25%, transparent 25%),
+    linear-gradient(315deg, color-mix(in srgb, var(--z-wisdom) 7%, transparent) 0 25%, transparent 25%);
+}
+.canvas-tree .tree-canvas-wrap,
+.canvas-tree .rf-wrap {
+  position: relative;
+  z-index: 1;
+}
+
 .canvas {
   flex: 1;
   position: relative;
@@ -64,11 +89,31 @@ body {
   position: relative;
   user-select: none;
 }
+.status-locked {
+  opacity: 0.38;
+}
+.status-locked .node-label {
+  font-size: 9px;
+}
 .node:hover {
   transform: scale(1.08);
   z-index: 20;
 }
-.node-label {
+.node-bonus {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 2px;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.node-spec .node-bonus,
+.node-spec .node-label {
+  transform: rotate(-45deg);
+}
+.node-spec .node-label {
+
   font-size: 10px;
   line-height: 1.12;
   font-weight: 600;
@@ -95,7 +140,21 @@ body {
   box-shadow: 0 0 22px rgba(255, 255, 255, 0.7);
   animation: pulse 2.2s ease-in-out infinite;
 }
-.node-root .node-label {
+.node-root .node-bonus {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 2px;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.node-spec .node-bonus,
+.node-spec .node-label {
+  transform: rotate(-45deg);
+}
+.node-spec .node-label {
+
   color: #0b0e14;
 }
 .node-spec {
@@ -104,7 +163,21 @@ body {
   border-radius: 10px;
   transform: rotate(45deg);
 }
+.node-spec .node-bonus {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 2px;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.node-spec .node-bonus,
 .node-spec .node-label {
+  transform: rotate(-45deg);
+}
+.node-spec .node-label {
+
   transform: rotate(-45deg);
   max-width: 62px;
 }
@@ -117,21 +190,47 @@ body {
   width: 52px;
   height: 52px;
 }
-.node-transit .node-label {
+.node-transit .node-bonus {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 2px;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.node-spec .node-bonus,
+.node-spec .node-label {
+  transform: rotate(-45deg);
+}
+.node-spec .node-label {
+
   font-size: 9px;
 }
 
 /* Слоты Черт (слева) и Ремёсел (справа) — квадратные, особый цвет. */
 .node-featslot,
 .node-craftslot {
+  width: 72px;
+  height: 72px;
+  width: 72px;
+  height: 72px;
   border-radius: 12px;
   width: 84px;
   height: 64px;
 }
 .node-featslot {
+  width: 72px;
+  height: 72px;
+  width: 72px;
+  height: 72px;
   --zc: #a78bfa; /* фиолетовый — Черты */
 }
 .node-craftslot {
+  width: 72px;
+  height: 72px;
+  width: 72px;
+  height: 72px;
   --zc: #f59e0b; /* янтарный — Ремёсла */
 }
 .node-featslot.status-available,
@@ -153,7 +252,21 @@ body {
 .node-feat.status-available {
   box-shadow: 0 0 16px color-mix(in srgb, var(--zc) 60%, transparent);
 }
-.node-feat .node-label {
+.node-feat .node-bonus {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 2px;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.node-spec .node-bonus,
+.node-spec .node-label {
+  transform: rotate(-45deg);
+}
+.node-spec .node-label {
+
   font-size: 10px;
 }
 
@@ -202,7 +315,21 @@ body {
   box-shadow: 0 0 16px color-mix(in srgb, var(--zc) 55%, transparent);
 }
 
-.node-secret .node-label {
+.node-secret .node-bonus {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 2px;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.node-spec .node-bonus,
+.node-spec .node-label {
+  transform: rotate(-45deg);
+}
+.node-spec .node-label {
+
   font-size: 26px;
   color: var(--muted);
 }
@@ -239,6 +366,12 @@ body {
 .react-flow__node .node {
   overflow: visible;
 }
+.status-locked {
+  opacity: 0.38;
+}
+.status-locked .node-label {
+  font-size: 9px;
+}
 .node:hover {
   z-index: 5000 !important;
 }
@@ -258,19 +391,6 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
-}
-.tree-zone-bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    conic-gradient(from -90deg at 50% 50%,
-      color-mix(in srgb, var(--z-strength) 9%, transparent) 0deg 90deg,
-      color-mix(in srgb, var(--z-dexterity) 9%, transparent) 90deg 180deg,
-      color-mix(in srgb, var(--z-wisdom) 9%, transparent) 180deg 270deg,
-      color-mix(in srgb, var(--z-magic) 9%, transparent) 270deg 360deg),
-    radial-gradient(circle at 50% 50%, #10151f 0%, #070a0f 72%);
 }
 .tree-zone-legend {
   position: absolute;
@@ -301,10 +421,18 @@ body {
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
 }
 .node-featslot {
+  width: 72px;
+  height: 72px;
+  width: 72px;
+  height: 72px;
   border-color: #fbbf24 !important;
   background: color-mix(in srgb, #fbbf24 18%, var(--panel-2)) !important;
 }
 .node-craftslot {
+  width: 72px;
+  height: 72px;
+  width: 72px;
+  height: 72px;
   border-color: #a78bfa !important;
   background: color-mix(in srgb, #a78bfa 18%, var(--panel-2)) !important;
 }
@@ -543,6 +671,7 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
+  background: transparent;
 }
 /* Хэндлы связей видны только в режиме редактора. */
 .react-flow__handle {
@@ -1199,7 +1328,32 @@ body {
     border-right: none;
     border-bottom: 1px solid var(--border);
   }
-  .canvas {
+  
+/* Древо: фон экрана фиксирован — не ездит при pan/zoom */
+.canvas-tree {
+  position: relative;
+  background: radial-gradient(circle at 50% 48%, #0e1219 0%, #070a0f 78%) !important;
+}
+.canvas-tree::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.55;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--z-magic) 7%, transparent) 0 25%, transparent 25%),
+    linear-gradient(225deg, color-mix(in srgb, var(--z-strength) 7%, transparent) 0 25%, transparent 25%),
+    linear-gradient(45deg, color-mix(in srgb, var(--z-dexterity) 7%, transparent) 0 25%, transparent 25%),
+    linear-gradient(315deg, color-mix(in srgb, var(--z-wisdom) 7%, transparent) 0 25%, transparent 25%);
+}
+.canvas-tree .tree-canvas-wrap,
+.canvas-tree .rf-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+.canvas {
     flex: 1;
   }
 }

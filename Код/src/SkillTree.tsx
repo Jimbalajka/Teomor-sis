@@ -66,9 +66,9 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
           animated: targetStatus === 'available',
           style: {
             stroke: targetUnlocked ? color : '#4b5563',
-            strokeWidth: targetUnlocked ? 3 : 1.5,
+            strokeWidth: targetUnlocked ? 2.5 : 1,
             strokeDasharray: targetUnlocked ? undefined : '6 6',
-            filter: targetUnlocked ? `drop-shadow(0 0 4px ${color})` : undefined,
+            filter: undefined,
           },
         };
       }),
@@ -154,7 +154,6 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
 
   return (
     <div className="tree-canvas-wrap">
-      <div className="tree-zone-bg" aria-hidden />
       <div className="tree-zone-legend">
         <span className="legend-magic">◆ Медведь · Разум</span>
         <span className="legend-strength">◆ Зюбания · Сила</span>

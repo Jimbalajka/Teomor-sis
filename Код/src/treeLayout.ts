@@ -13,9 +13,6 @@ const R_SPEC = 460;
 const R_SCHOOL = 760;
 const R_CENTER = 175;
 
-const R_FEAT_LANE = 1180;
-const R_CRAFT_LANE = 1180;
-
 function polar(r: number, angle: number) {
   return { x: Math.round(Math.cos(angle) * r), y: Math.round(Math.sin(angle) * r) };
 }
@@ -107,18 +104,14 @@ export function applyPoeLayout(source: SkillNode[]): SkillNode[] {
 
   const featSlots = nodes.filter((n) => n.category === 'feat_slot').sort((a, b) => a.id.localeCompare(b.id));
   featSlots.forEach((n, i) => {
-    const a = 180 * DEG;
-    const r = R_FEAT_LANE + i * 40;
-    pos.set(n.id, polar(r, a));
-    angleOf.set(n.id, a);
+    pos.set(n.id, { x: -980, y: -260 + i * 260 });
+    angleOf.set(n.id, 180 * DEG);
   });
 
   const craftSlots = nodes.filter((n) => n.category === 'craft_slot').sort((a, b) => a.id.localeCompare(b.id));
   craftSlots.forEach((n, i) => {
-    const a = 0;
-    const r = R_CRAFT_LANE + i * 40;
-    pos.set(n.id, polar(r, a));
-    angleOf.set(n.id, a);
+    pos.set(n.id, { x: 980, y: -260 + i * 260 });
+    angleOf.set(n.id, 0);
   });
 
   for (const n of nodes.filter((n) => n.category === 'specialization')) {
