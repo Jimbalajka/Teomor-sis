@@ -8,6 +8,8 @@ import {
   SKILL_GROUPS,
   charCapForLevel,
   kvelRankForLevel,
+  rawSkillValue,
+  skillValue,
   type SkillGroup,
 } from './characterSheetData';
 
@@ -29,17 +31,24 @@ const zoneOfChar: Record<SkillGroup['char'], string> = {
 };
 
 export function CharacterSheet() {
-  const { state, treeData, totalStatModifiers } = useSkillTree();
+  const { state, treeData, totalStatModifiers, kb } = useSkillTree();
+  const proficiencies = state.proficiencies ?? [];
+  const { combat } = state;
   const [fields, setFields] = useState<Record<string, string>>(loadSheet);
 
   useEffect(() => {
     localStorage.setItem(LS_SHEET, JSON.stringify(fields));
   }, [fields]);
 
+  useEffect(() => {
+    const refresh = () => setFields(loadSheet());
+    window.addEventListener('teomor-sheet-updated', refresh);
+    return () => window.removeEventListener('teomor-sheet-updated', refresh);
+  }, []);
+
   const set = (key: string, val: string) =>
     setFields((f) => ({ ...f, [key]: val }));
 
-  // Значение характеристики = база (-2) + бонусы, но не выше потолка ранга Квеля.
   const cap = charCapForLevel(state.level);
   const rawCharValue = (char: string) => BASE_CHAR + (totalStatModifiers[char] ?? 0);
   const charValue = (char: string) => Math.min(rawCharValue(char), cap);
@@ -47,7 +56,6 @@ export function CharacterSheet() {
   const race = raceById(state.race);
   const bg = backgroundById(state.background);
 
-  // Собираем выбранное в древе: Квели, Аспекты, Сигилы, Черты, Ремёсла.
   const quels: string[] = [];
   const aspects: string[] = [];
   const sigils: string[] = [];
@@ -59,6 +67,7 @@ export function CharacterSheet() {
     if (node.category === 'specialization') {
       quels.push(`${node.label} (ур ${state.specializationLevels[node.zone] ?? 0})`);
     }
+    if (node.category === 'feat') feats.push(node.label);
     const picks = state.nodeChoices[id] ?? [];
     for (const c of node.choices ?? []) {
       const chosen = picks.filter((p) => c.options.some((o) => o.id === p));
@@ -68,7 +77,6 @@ export function CharacterSheet() {
       else if (c.id === 'feat') feats.push(...chosen);
       else if (c.id === 'craft') crafts.push(...chosen);
     }
-    // Профессии-суб-типы дают специализированный Квель.
     if (node.category === 'transit_specialized' && node.choices?.some((c) => c.id === 'aspect')) {
       quels.push(`Квель: ${node.label}`);
     }
@@ -95,9 +103,33 @@ export function CharacterSheet() {
           <span>Предыстория: {bg?.name ?? '—'}</span>
           <span>Уровень: {state.level}</span>
           <span>Ранг Квеля: {kvelRankForLevel(state.level)}</span>
-          <span>Потолок характеристик: +{cap}</span>
+          <span>Потолок хар./навыков: +{cap}</span>
+          <span>КБ: {kb}</span>
+          <span>
+            Раны: {combat.wounds}/{combat.woundsMax}
+          </span>
+          <span>
+            Усталость: {combat.fatigue}/{combat.fatigueMax}
+          </span>
         </div>
       </div>
+
+      {Object.keys(totalStatModifiers).length > 0 && (
+        <div className="sheet-tree-mods panel">
+          <b>Бонусы из древа:</b>{' '}
+          {Object.entries(totalStatModifiers)
+            .map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`)
+            .join(' · ')}
+        </div>
+      )}
+
+      {proficiencies.length > 0 && (
+        <div className="sheet-derived-choices panel">
+          <div className="derived-line">
+            <b>Владения:</b> {proficiencies.join(' · ')}
+          </div>
+        </div>
+      )}
 
       {(quels.length || aspects.length || sigils.length || feats.length || crafts.length) > 0 && (
         <div className="sheet-derived-choices panel">
@@ -135,24 +167,23 @@ export function CharacterSheet() {
             </header>
             <ul className="sheet-skills">
               {group.skills.map((s) => {
-                const treeBonus = totalStatModifiers[s.name];
+                const raw = rawSkillValue(totalStatModifiers, s.name);
+                const val = skillValue(totalStatModifiers, s.name, state.level);
+                const capped = raw > cap;
                 return (
                   <li key={s.name}>
-                    <span className="sheet-skill-name">
-                      {s.name}
-                      {treeBonus ? (
-                        <span className="skill-tree-bonus">
-                          {' '}
-                          дрво {treeBonus > 0 ? `+${treeBonus}` : treeBonus}
-                        </span>
-                      ) : null}
+                    <span className="sheet-skill-name">{s.name}</span>
+                    <span
+                      className="sheet-skill-val sheet-char-val"
+                      title={
+                        capped
+                          ? `Ограничено потолком ранга Квеля (+${cap})`
+                          : undefined
+                      }
+                    >
+                      +{val}
+                      {capped && <span className="char-capped"> ⚠</span>}
                     </span>
-                    <input
-                      className="sheet-skill-in"
-                      placeholder={s.dice ? 'к' : treeBonus ? `${treeBonus}` : ''}
-                      value={fields[`skill:${s.name}`] ?? ''}
-                      onChange={(e) => set(`skill:${s.name}`, e.target.value)}
-                    />
                   </li>
                 );
               })}
@@ -187,8 +218,9 @@ export function CharacterSheet() {
       </div>
 
       <p className="muted">
-        Значение характеристики = база {BASE_CHAR} + бонусы из древа/расы/предыстории
-        (автоматически). Остальные поля — вписываешь вручную, сохраняется само.
+        Характеристики и навыки = база {BASE_CHAR} + бонусы из древа/расы/предыстории
+        (0–15, автоматически). КБ, раны и усталость — в Sidebar. Имя, инвентарь и прочее —
+        вручную.
       </p>
     </div>
   );

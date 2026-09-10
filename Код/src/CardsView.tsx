@@ -9,7 +9,6 @@ import {
 } from './cardsData';
 import { CardPreview } from './CardPreview';
 import { CardConstructor } from './BuildCardPanel';
-import { RulesPanel } from './RulesPanel';
 import { useSkillTree } from './SkillTreeContext';
 import type { ZoneType } from './types';
 
@@ -476,7 +475,6 @@ export function CardsView() {
           </div>
         )}
 
-      <RulesPanel />
     </div>
   );
 }
