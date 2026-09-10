@@ -357,6 +357,14 @@ function loadTree(): SkillTreeData {
   }
 }
 
+/** Ощутимый бонус за уровень Дара (1–10): +1 к ключевой характеристике за каждый уровень. */
+const DAR_LEVEL_STAT: Partial<Record<ZoneType, string>> = {
+  magic: 'Разум',
+  strength: 'Мощь',
+  dexterity: 'Моторика',
+  wisdom: 'Стержень',
+};
+
 function computeTotals(
   state: SkillTreeState,
   treeData: SkillTreeData,
@@ -386,6 +394,13 @@ function computeTotals(
     if (!node?.statModifiers) continue;
     for (const [stat, val] of Object.entries(node.statModifiers)) {
       totals[stat] = (totals[stat] ?? 0) + val;
+    }
+  }
+  for (const [zone, stat] of Object.entries(DAR_LEVEL_STAT) as [ZoneType, string][]) {
+    const darLvl = state.specializationLevels[zone] ?? 0;
+    if (darLvl > 0 && stat) {
+      totals[stat] = (totals[stat] ?? 0) + darLvl;
+      totals['Усталость'] = (totals['Усталость'] ?? 0) + Math.floor(darLvl / 3);
     }
   }
   return totals;

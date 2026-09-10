@@ -118,17 +118,30 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
       {state.level >= 1 && (
         <Section title="Бой">
           <div className="combat-compact">
-            <div className="combat-track">
-              <span>КБ <b>{kb}</b> · броня +</span>
-              <input
-                type="number"
-                min={0}
-                className="armor-input"
-                value={state.armorBonus}
-                onChange={(e) =>
-                  dispatch({ type: 'SET_ARMOR_BONUS', value: Number(e.target.value) })
-                }
-              />
+            <div className="combat-track kb-row">
+              <div className="kb-block">
+                <span>КБ <b>{kb}</b></span>
+                <span className="kb-breakdown">
+                  10 + укл {totalStatModifiers['Уклонение'] ?? 0}
+                  {' + броня '}
+                  {state.armorBonus}
+                  {(totalStatModifiers['КБ'] ?? 0) + (totalStatModifiers['Броня'] ?? 0) > 0
+                    ? ` + древо ${(totalStatModifiers['КБ'] ?? 0) + (totalStatModifiers['Броня'] ?? 0)}`
+                    : ''}
+                </span>
+              </div>
+              <label className="armor-field">
+                Броня
+                <input
+                  type="number"
+                  min={0}
+                  className="armor-input"
+                  value={state.armorBonus}
+                  onChange={(e) =>
+                    dispatch({ type: 'SET_ARMOR_BONUS', value: Number(e.target.value) })
+                  }
+                />
+              </label>
             </div>
             <div className="combat-track">
               <span>Раны {combat.wounds}/{combat.woundsMax}</span>
@@ -158,15 +171,36 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
         </Section>
       )}
 
+      {state.proficiencies.length > 0 && (
+        <Section title="Способности">
+          <ul className="prof-list">
+            {state.proficiencies.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       <Section title="Дары" defaultOpen={false}>
         {ZONES.map(({ zone, dar, branch }) => {
           const level = state.specializationLevels[zone] ?? 0;
           const opened = level >= 1;
+          const darStat =
+            zone === 'magic'
+              ? 'Разум'
+              : zone === 'strength'
+                ? 'Мощь'
+                : zone === 'dexterity'
+                  ? 'Моторика'
+                  : 'Стержень';
           return (
             <div key={zone} className={`spec-row zone-${zone}`}>
               <div className="spec-info">
                 <span className="spec-name">{dar}</span>
                 <span className="spec-dar">{branch}</span>
+                {level > 0 && (
+                  <span className="spec-bonus muted">+{level} {darStat}{level >= 3 ? ` · +${Math.floor(level / 3)} уст.` : ''}</span>
+                )}
               </div>
               <div className="spec-ctrl">
                 <span className="spec-level">{level}/10</span>

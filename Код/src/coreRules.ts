@@ -67,14 +67,14 @@ export function computeKB(
   );
 }
 
-/** Потолок ран: база + бонусы древа, не выше WOUNDS_MAX. */
+/** Потолок ран: 2 + рост с уровнем (+1 каждые 5 ур.) + бонусы древа. Ур.15 ≈ 4. */
 export function computeWoundsMax(
   level: number,
   modifiers: Record<string, number>,
 ): number {
   const fromTree = modifiers['Ранения'] ?? 0;
-  const fromLevel = level >= 10 ? 1 : 0;
-  return Math.min(WOUNDS_MAX, Math.max(WOUNDS_MIN, WOUNDS_MIN + fromTree + fromLevel));
+  const fromLevel = Math.min(2, Math.floor(Math.max(0, level - 1) / 5));
+  return Math.min(WOUNDS_MAX, Math.max(WOUNDS_MIN, WOUNDS_MIN + fromLevel + fromTree));
 }
 
 /** Потолок усталости: растёт с уровнем + бонусы древа. */
