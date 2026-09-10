@@ -1,16 +1,14 @@
 {
   "name": "teomor-skill-tree",
   "private": true,
-  "version": "2.2.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Interactive skill tree for the Teomor tabletop RPG (Квель / matrix cascade system)",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "predev": "node -e \"console.log(\\\"\\n✅ Папка Kod OK — npm run dev\\n\\\")\"",
-    "verify": "node verify.mjs"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@xyflow/react": "^12.3.5",

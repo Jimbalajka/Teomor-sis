@@ -7,7 +7,7 @@
 - **Clone:** `/tmp/teomor-sis` или `~/Teomor-sis`
 - **Токен:** `/home/ec2-user/agent/.env` → `GITHUB_TOKEN=...` (не коммитить)
 - **Ветка:** `feat/core-v2-full` → PR в main
-- **Канон:** `teomor-patches/Код/src/` + mirror `day1-bundle/app/src/`
+- **Канон:** `Код/` (npm run dev) + mirror `teomor-patches/day1-bundle/app/src/`
 
 ## Текущий PR
 - #12 — playtest UI fixes (может быть merged)
@@ -34,6 +34,8 @@
 Кросс-узлы: `feat_warmage`, `feat_oracle`, `feat_sigil_scribe`, `ts_arcane_bridge` (2 школы).
 
 ## Не делать
+- Не менять архитектуру UI/CSS без запроса
+- Не добавлять banner/verify/buildInfo слои
 - Не просить токен — читать `.env`
 - Не пушить в PhDSputnikFleet
 - Не трогать пресеты пока не готова ветка
