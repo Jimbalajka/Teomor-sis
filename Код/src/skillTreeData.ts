@@ -76,6 +76,33 @@ const nodes: SkillNode[] = [
   prof('st_enchanter', -720, -620, 'Зачарователь', 'magic', 'sch_craft', 'Суб-тип: наложение аспектов/эффектов на предметы.'),
   prof('st_artificer', -600, -680, 'Артефактор', 'magic', 'sch_craft', 'Суб-тип: создание артефактов и механо-магии.'),
 
+  // ── Волшебство: плюсы/минусы ──
+  { id: 'ts_warding', x: -420, y: -240, label: 'Обереги', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_wizardry'], requiredSpecialization: { zone: 'magic', level: 2 } }, statModifiers: { КБ: 1 }, description: 'Плюс: +1 КБ от барьеров. Минус: −1 к дальности Сигилов.' },
+  { id: 'ts_overchannel', x: -580, y: -200, label: 'Перегрузка', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_concentration'], requiredSpecialization: { zone: 'magic', level: 3 } }, statModifiers: { Волшебство: 1, Усталость: 1 }, description: 'Плюс: +1 Волшебство, Sигилы +1 кость. Минус: +1 усталость за мощный каст.' },
+  { id: 'feat_evoker', x: -660, y: -260, label: 'Пламя и гром', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_overchannel'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Элементальные Sигилы без подготовки; прочие школы +1 усталость.' },
+  { id: 'feat_necrotic', x: -820, y: -280, label: 'Касание смерти', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['st_necromancer'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Некромант: касание = 1 рана; лечишь половину нанесённого.' },
+  { id: 'feat_blood_price', x: -760, y: -460, label: 'Цена крови', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['st_bloodmage'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Кровавый маг: трать раны вместо усталости (1 рана = 2 усталости каста).' },
+
+  // ── Мистика: контроль vs урон ──
+  { id: 'ts_mindshield', x: -400, y: -680, label: 'Щит разума', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_divination'], requiredSpecialization: { zone: 'magic', level: 3 } }, statModifiers: { Стержень: 1 }, description: 'Плюс: спасброски vs контроля. Минус: псионический урон −1 кость.' },
+  { id: 'feat_psychic_lance', x: -320, y: -760, label: 'Пси-копьё', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['st_mystic'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Дальняя атака разумом, игнор брони; после — +1 усталость.' },
+  { id: 'ts_void_glimpse', x: -500, y: -720, label: 'Взгляд в пустоту', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_mysticism'], requiredSpecialization: { zone: 'magic', level: 3 } }, description: 'Плюс: видишь невидимое 1 раунд. Минус: −1 КБ до конца хода после.' },
+
+  // ── Ремесленник: предметы vs скорость ──
+  { id: 'ts_infusion', x: -640, y: -620, label: 'Влив силы', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_craft'], requiredSpecialization: { zone: 'magic', level: 2 } }, statModifiers: { Ремесло: 1 }, description: 'Заряжай предметы заранее; импровизация +1 усталость.' },
+  { id: 'feat_battle_alchemy', x: -780, y: -600, label: 'Боевой настой', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['st_alchemist'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Зелье = быстрая атака; без заготовки — помеха на бросок.' },
+  { id: 'feat_rune_weapon', x: -680, y: -700, label: 'Рунное оружие', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['st_enchanter'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Вложи Сигил в оружие (1/отдых); без зарядки — обычный удар.' },
+
+  // ── Синтез школ (2+ родителя) ──
+  { id: 'ts_arcane_bridge', x: -440, y: -400, label: 'Синтез школ', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_concentration', 'ts_divination'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Волшебство + Мистика. 1×/бой контрмагия без усталости после прорицания.' },
+  { id: 'feat_artifice_ritual', x: -520, y: -480, label: 'Ритуальный ремесленник', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_infusion', 'ts_concentration'], requiredSpecialization: { zone: 'magic', level: 5 } }, description: 'Волшебство + Ремесло. Холодный Sигил из предмета: −1 усталость, но 1 раунд подготовки.' },
+
+  // ── Смежные ветки (Дар Медведя + другой Дар) ──
+  { id: 'feat_warmage', x: -240, y: -480, label: 'Рунный дуэлянт', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['sch_wizardry'], requiredSpecialization: { zone: 'dexterity', level: 3 } }, description: 'Волшебство + Дар Змея 3. Парирование заряжает клинок Сигилом (1/бой).' },
+  { id: 'feat_oracle', x: -280, y: -560, label: 'Оракул', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_mysticism'], requiredSpecialization: { zone: 'wisdom', level: 3 } }, description: 'Мистика + Дар Голубя 3. После пакта — один каст Колдовства без усталости.' },
+  { id: 'feat_sigil_scribe', x: -200, y: -400, label: 'Сигил-писец', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['sch_craft'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, description: 'Ремесло + Дар Змея 2. Печатай Сигилы как знаки Перо (−1 усталость, нужен инструмент).' },
+  { id: 'feat_spellblade', x: -120, y: -520, label: 'Клинок заклинателя', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['feat_battlemage'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Боевой маг + 4 ур. Медведя. Ближняя атака накладывает выбранный фокус (1/бой).' },
+
   // ════════ ДАР ЗЮБАНИЯ — СИЛА (красный) ═══════════════════
   { id: 'spec_strength', x: 340, y: -340, label: 'Дар Зюбания', zone: 'strength', category: 'specialization', cost: { type: 'OR', amount: 2 }, level: 0, maxLevel: 10, requirements: { parentIds: ['center_start'] }, description: 'Ближний бой. Боевые Формы (Квель воина). До 10 за ОР.' },
   { ...school('sch_berserk', 520, -300, 'Берсерк', 'strength', 'Форма Ярости: урон ценой защиты.'), requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'strength', level: 1 } } },
@@ -227,10 +254,22 @@ addRoad('sch_witchcraft', -520, 300, 'wisdom', [
   { t: 'k', label: 'Воля покровителя', desc: 'Раз за отдых игнорируй «1» на Кубе Стиля на одном касте.' },
 ]);
 addRoad('sch_wizardry', -520, -300, 'magic', [
-  { t: 's', label: '+1 Волшебство', mods: { Волшебство: 1 } },
-  { t: 's', label: '+1 усталость', mods: { Усталость: 1 } },
-  { t: 'n', label: 'Эхо заклинания', desc: 'Раз в ход повтори последний Сигил урона без +1 усталости.' },
-  { t: 'k', label: 'Разум как броня', desc: 'Раз за бой перенаправь 1 рану в +1 усталость вместо раны.' },
+  { t: 's', label: 'Арканная мощь', mods: { Волшебство: 1 } },
+  { t: 's', label: 'Запас маны', mods: { Усталость: 1 } },
+  { t: 'n', label: 'Эхо заклинания', desc: 'Раз в ход повтори Sигил урона без +1 усталости (минус: тот же элемент).' },
+  { t: 'k', label: 'Разум как броня', desc: 'Раз/бой: 1 рана → +1 усталость вместо раны (минус: не лечит).' },
+]);
+addRoad('sch_mysticism', -360, -520, 'magic', [
+  { t: 's', label: 'Тонкое зрение', mods: { Мистика: 1 } },
+  { t: 's', label: 'Холодный разум', mods: { Проницательность: 1 } },
+  { t: 'n', label: 'Третий глаз', desc: 'Видишь магию и ловушки; −1 КБ пока активен (фокус).' },
+  { t: 'k', label: 'Пустота разума', desc: 'Иммунитет к чтению мыслей; −2 к социальным проверкам эмпатии.' },
+]);
+addRoad('sch_craft', -560, -560, 'magic', [
+  { t: 's', label: 'Мастерская', mods: { Ремесло: 1 } },
+  { t: 's', label: 'Алхимия', mods: { Алхимия: 1 } },
+  { t: 'n', label: 'Быстрая сборка', desc: 'Холодные без подготовки; готовые Sигилы −1 кость урона.' },
+  { t: 'k', label: 'Душа ремесленника', desc: 'Артефакты +1 ранг; без фокус-инструмента каст невозможен.' },
 ]);
 addRoad('sch_berserk', 520, -300, 'strength', [
   { t: 's', label: '+1 урон б.боя', mods: { 'Ближний бой (Мощь)': 1 } },

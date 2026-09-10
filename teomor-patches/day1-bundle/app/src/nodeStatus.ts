@@ -3,9 +3,8 @@ import type { NodeStatus, SkillNode, SkillTreeState } from './types';
 function parentsSatisfied(node: SkillNode, state: SkillTreeState): boolean {
   const parents = node.requirements?.parentIds;
   if (!parents || parents.length === 0) return true;
-  return parents.some(
-    (id) => id === 'center_start' || state.allocatedNodes.includes(id),
-  );
+  const ok = (id: string) => id === 'center_start' || state.allocatedNodes.includes(id);
+  return parents.every(ok);
 }
 
 function specializationSatisfied(node: SkillNode, state: SkillTreeState): boolean {
@@ -82,7 +81,10 @@ export function blockReason(
   data?: TreeData,
 ): string | null {
   if (state.allocatedNodes.includes(node.id)) return 'Уже изучено';
-  if (!parentsSatisfied(node, state)) return 'Родительский узел не изучен';
+  if (!parentsSatisfied(node, state)) {
+    const n = node.requirements?.parentIds?.length ?? 0;
+    return n > 1 ? 'Не все родительские узлы изучены' : 'Родительский узел не изучен';
+  }
   if (!specializationSatisfied(node, state)) {
     const req = node.requirements!.requiredSpecialization!;
     return `Требуется ${req.level} уровень ветки`;
