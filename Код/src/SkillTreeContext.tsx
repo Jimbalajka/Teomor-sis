@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { SkillNode, SkillTreeData, SkillTreeState, ZoneType } from './types';
+import type { PlaytestPreset } from './playtestPresets';
 import { migrateLegacyPoints } from './types';
 import { initialSkillTree } from './skillTreeData';
 import { blockReason } from './nodeStatus';
@@ -62,7 +63,7 @@ type Action =
   | { type: 'REST' }
   | { type: 'SYNC_COMBAT_LIMITS'; combat: Pick<CombatState, 'woundsMax' | 'fatigueMax'> }
   | { type: 'RESET' }
-  | { type: 'LOAD_PLAYTEST_PRESET'; preset: import('./playtestPresets').PlaytestPreset };
+  | { type: 'LOAD_PLAYTEST_PRESET'; preset: PlaytestPreset };
 
 function clampCombat(
   combat: CombatState,
@@ -228,18 +229,21 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
         ...defaultState.specializationLevels,
         ...p.specializationLevels,
       };
-      return {
+      const next: SkillTreeState = {
         ...defaultState,
         level: p.level,
         race: p.race,
         background: null,
-        allocatedNodes: p.allocatedNodes,
+        allocatedNodes: [...p.allocatedNodes],
         specializationLevels: specLevels,
         orPoints: p.orPoints,
         combat: defaultCombatState(p.level, {}),
+        armorBonus: 0,
+        discoveredSecrets: [],
         nodeChoices: {},
         raceChoices: {},
       };
+      return next;
     }
 
     case 'RESET':
