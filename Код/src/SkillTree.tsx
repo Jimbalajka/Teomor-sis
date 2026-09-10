@@ -169,7 +169,7 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         fitView
         minZoom={0.2}
         maxZoom={2}
-        proOptions={{ hideAttribution: true }}
+        proOptions={{ hideAttribution: false }}
       >
         <Background color="#1f2937" gap={28} />
         <Controls showInteractive={false} />

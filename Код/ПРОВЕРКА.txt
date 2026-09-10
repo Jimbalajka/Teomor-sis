@@ -1,0 +1,7 @@
+Если нет v2.2 — обычно скопирован только src/, БЕЗ index.html
+
+Нужна ВСЯ папка Kod:
+  index.html, package.json, src/buildInfo.ts, src/skillTreeData.ts (527+ строк)
+
+Проверка: npm run verify
+Запуск: npm run dev → http://localhost:5173/?reset=1
