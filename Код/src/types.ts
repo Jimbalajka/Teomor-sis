@@ -107,6 +107,10 @@ export interface SkillTreeState {
   combat: CombatState;
   /** Бонус брони вручную (щит, доспех); Уклонение — из древа. */
   armorBonus: number;
+  /** Бонусы с листа / пресета (не из древа). */
+  manualModifiers: Record<string, number>;
+  /** Владения и прочее текстом. */
+  proficiencies: string[];
   discoveredSecrets: string[];
   nodeChoices: Record<string, string[]>;
 }

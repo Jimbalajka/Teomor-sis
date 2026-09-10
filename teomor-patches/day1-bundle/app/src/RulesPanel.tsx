@@ -25,12 +25,38 @@ const RULES: { h: string; items: string[] }[] = [
   },
   {
     h: 'Усталость',
-    items: ['На карте. Закрашиваешь на листе. Каскад — вне игры.'],
+    items: [
+      'Макс = 3 + floor(ур/4) + бонусы древа (узлы «+Усталость»).',
+      'Пример: ур.15 → 3+3=6 (+ узлы). Тратится по картам-приёмам.',
+      'Квель = потолок билда вне игры. За столом — закрашиваешь ячейки.',
+    ],
   },
 ];
 
-export function RulesPanel() {
+interface RulesPanelProps {
+  expanded?: boolean;
+}
+
+export function RulesPanel({ expanded = false }: RulesPanelProps) {
   const [open, setOpen] = useState(true);
+  if (expanded) {
+    return (
+      <div className="rules-panel rules-panel--full">
+        <div className="rules-body">
+          {RULES.map((r) => (
+            <section key={r.h} className="rules-sec">
+              <h4>{r.h}</h4>
+              <ul>
+                {r.items.map((i, k) => (
+                  <li key={k}>{i}</li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="rules-panel">
       <button className="rules-toggle" onClick={() => setOpen((v) => !v)}>

@@ -42,6 +42,8 @@ const defaultState: SkillTreeState = {
   orPoints: 0,
   combat: defaultCombatState(0, {}),
   armorBonus: 0,
+  manualModifiers: {},
+  proficiencies: [],
   discoveredSecrets: [],
   nodeChoices: {},
 };
@@ -61,6 +63,7 @@ type Action =
   | { type: 'ADD_FATIGUE'; amount: number }
   | { type: 'CLEAR_FATIGUE'; amount?: number }
   | { type: 'REST' }
+  | { type: 'SET_COMBAT'; combat: Partial<CombatState> }
   | { type: 'SYNC_COMBAT_LIMITS'; combat: Pick<CombatState, 'woundsMax' | 'fatigueMax'> }
   | { type: 'RESET' }
   | { type: 'LOAD_PLAYTEST_PRESET'; preset: PlaytestPreset };
@@ -224,6 +227,17 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
         combat: { ...state.combat, wounds: 0, fatigue: 0 },
       };
 
+    case 'SET_COMBAT': {
+      const merged = { ...state.combat, ...action.combat };
+      return {
+        ...state,
+        combat: clampCombat(merged, {
+          woundsMax: merged.woundsMax,
+          fatigueMax: merged.fatigueMax,
+        }),
+      };
+    }
+
     case 'SYNC_COMBAT_LIMITS':
       return {
         ...state,
@@ -236,20 +250,27 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
         ...defaultState.specializationLevels,
         ...p.specializationLevels,
       };
+      const manual = p.manualModifiers ?? {};
       const next: SkillTreeState = {
         ...defaultState,
         level: p.level,
         race: p.race,
-        background: null,
+        background: p.background ?? null,
         allocatedNodes: [...p.allocatedNodes],
         specializationLevels: specLevels,
         orPoints: p.orPoints,
-        combat: defaultCombatState(p.level, {}),
-        armorBonus: 0,
+        manualModifiers: manual,
+        proficiencies: p.proficiencies ?? [],
+        combat: defaultCombatState(p.level, manual),
+        armorBonus: p.armorBonus ?? 0,
         discoveredSecrets: [],
-        nodeChoices: {},
+        nodeChoices: p.nodeChoices ?? {},
         raceChoices: {},
       };
+      if (p.sheetFields) {
+        localStorage.setItem('teomor_sheet_v1', JSON.stringify(p.sheetFields));
+        window.dispatchEvent(new Event('teomor-sheet-updated'));
+      }
       return next;
     }
 
@@ -306,6 +327,8 @@ function loadState(): SkillTreeState {
       orPoints,
       combat,
       armorBonus,
+      manualModifiers: parsed.manualModifiers ?? defaultState.manualModifiers,
+      proficiencies: parsed.proficiencies ?? defaultState.proficiencies,
       discoveredSecrets: parsed.discoveredSecrets ?? defaultState.discoveredSecrets,
       nodeChoices: parsed.nodeChoices ?? defaultState.nodeChoices,
     };
@@ -354,6 +377,9 @@ function computeTotals(
         totals[chosen] = (totals[chosen] ?? 0) + (c.amount ?? 1);
       }
     }
+  }
+  for (const [stat, val] of Object.entries(state.manualModifiers ?? {})) {
+    totals[stat] = (totals[stat] ?? 0) + val;
   }
   for (const id of state.allocatedNodes) {
     const node = treeData.nodes.find((n) => n.id === id);

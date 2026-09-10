@@ -87,7 +87,7 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         if (state.level < 1 || !state.background) setShowRaceModal(true);
         return;
       }
-      // Клик по уже открытой специализации — повысить её уровень (за ОУ).
+      // Клик по уже открытой специализации — повысить её уровень (за ОР).
       if (
         node.category === 'specialization' &&
         state.allocatedNodes.includes(node.id)

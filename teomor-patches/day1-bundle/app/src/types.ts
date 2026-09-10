@@ -1,6 +1,8 @@
 // Единая модель данных древа навыков системы «Теомор» (ядро v2).
 // Экспортирует итоговые модификаторы, которые лист персонажа читает как read-only.
 
+import type { CombatState } from './coreRules';
+
 export type ZoneType =
   | 'center'
   | 'magic'
@@ -22,6 +24,12 @@ export type NodeStatus = 'locked' | 'available' | 'unlocked';
 
 /** Валюта прокачки узла — одна: ОР (Очко Развития). */
 export type CostType = 'OR';
+
+/** Старые сохранения: transit / development → ОР. */
+export function normalizeCostType(type: unknown): CostType {
+  if (type === 'OR' || type === 'transit' || type === 'development') return 'OR';
+  return 'OR';
+}
 
 export interface SkillNode {
   id: string;
@@ -95,15 +103,25 @@ export interface SkillTreeState {
   specializationLevels: Record<ZoneType, number>;
   /** ОР — Очко Развития (единая валюта древа). */
   orPoints: number;
+  /** Раны и усталость — считает приложение, игрок только отмечает. */
+  combat: CombatState;
+  /** Бонус брони вручную (щит, доспех); Уклонение — из древа. */
+  armorBonus: number;
+  /** Бонусы с листа / пресета (не из древа). */
+  manualModifiers: Record<string, number>;
+  /** Владения и прочее текстом. */
+  proficiencies: string[];
   discoveredSecrets: string[];
   nodeChoices: Record<string, string[]>;
 }
 
 /** Миграция сохранений v1 (ОУ + ОО) → v2 (ОР). */
-export function migrateLegacyPoints(parsed: Partial<SkillTreeState> & {
-  developmentPoints?: number;
-  transitPoints?: number;
-}): number | undefined {
+export function migrateLegacyPoints(
+  parsed: Partial<SkillTreeState> & {
+    developmentPoints?: number;
+    transitPoints?: number;
+  },
+): number | undefined {
   if (typeof parsed.orPoints === 'number') return parsed.orPoints;
   const ou = parsed.developmentPoints;
   const oo = parsed.transitPoints;

@@ -1,5 +1,5 @@
 // Раскладка листа персонажа «Теомор» (из PDF «Лист Перса новый для Теомора»).
-// Навыки сгруппированы по 4 характеристикам. dice:true — навык-кость.
+// Навыки сгруппированы по 4 характеристикам; значения 0–15 из древа/расы/предыстории.
 
 export interface SkillDef {
   name: string;
@@ -15,8 +15,8 @@ export const SKILL_GROUPS: SkillGroup[] = [
   {
     char: 'Моторика',
     skills: [
-      { name: 'Акробатика', dice: true },
-      { name: 'Уклонение', dice: true },
+      { name: 'Акробатика' },
+      { name: 'Уклонение' },
       { name: 'Судовождение' },
       { name: 'Вождение' },
       { name: 'Пилотирование' },
@@ -66,7 +66,7 @@ export const SKILL_GROUPS: SkillGroup[] = [
   {
     char: 'Мощь',
     skills: [
-      { name: 'Атлетика', dice: true },
+      { name: 'Атлетика' },
       { name: 'Выживание' },
       { name: 'Ближний бой (Мощь)' },
       { name: 'Запугивание (Мощь)' },
@@ -75,20 +75,16 @@ export const SKILL_GROUPS: SkillGroup[] = [
   },
 ];
 
-// Прочие поля листа (правый блок).
+// Прочие поля листа (правый блок) — ввод вручную.
+// Раны, усталость и КБ считаются приложением (см. Sidebar / coreRules).
 export const DERIVED_FIELDS = [
   'Шаг',
   'Бег',
-  'Защита',
   'Стойкость',
-  'Ранения',
-  'Усталость',
-  'Усталость макс',
-  'Усталость тек',
   'Квель',
   'Владения',
   'Деньги',
-];
+] as const;
 
 /** Базовое значение любой характеристики на старте. */
 export const BASE_CHAR = 0;
@@ -101,10 +97,29 @@ export function kvelRankForLevel(level: number): number {
   return 3; // 4–1
 }
 
-/** Потолок характеристики по рангу Квеля (не разогнаться раньше времени). */
+/** Потолок характеристики по рангу Квеля (0–15; с артефактами до 20). */
 export function charCapForLevel(level: number): number {
-  if (level <= 3) return 3; // Квель 10
-  if (level <= 7) return 5; // Квель 9–8
-  if (level <= 15) return 8; // Квель 7–5
-  return 10; // Квель 4–1
+  if (level <= 3) return 3;
+  if (level <= 7) return 5;
+  if (level <= 15) return 12;
+  return 15;
+}
+
+/** Сырой бонус навыка из древа / расы / предыстории. */
+export function rawSkillValue(
+  modifiers: Record<string, number>,
+  name: string,
+): number {
+  return BASE_CHAR + (modifiers[name] ?? 0);
+}
+
+/** Итог навыка 0–15 с учётом потолка уровня. */
+export function skillValue(
+  modifiers: Record<string, number>,
+  name: string,
+  level: number,
+): number {
+  const cap = charCapForLevel(level);
+  const raw = rawSkillValue(modifiers, name);
+  return Math.max(0, Math.min(cap, raw));
 }

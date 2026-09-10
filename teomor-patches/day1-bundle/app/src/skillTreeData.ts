@@ -22,7 +22,7 @@ const school = (id: string, x: number, y: number, label: string, zone: SkillNode
 const opt = (label: string, desc?: string) => ({ id: label, label, desc });
 const SIGIL_OPTIONS = [
   opt('Урон', 'Наносит урон стихией сборки.'),
-  opt('Лечение', 'Восстанавливает хиты цели.'),
+  opt('Лечение', 'Снимает 1 рану с цели (по правилам лечения).'),
   opt('Дебафф', 'Накладывает состояние (по Сигилу).'),
   opt('Дистанция', 'Дальнобойное применение.'),
 ];
@@ -47,7 +47,7 @@ const nodes: SkillNode[] = [
   // ── Центр + общие навыки ─────────────────────────────────
   { id: 'center_start', x: 0, y: 0, label: 'Центр', zone: 'center', category: 'root', cost: { type: 'OR', amount: 0 }, description: 'Исток персонажа (1 уровень после выбора расы). От него — 4 Дара и общие навыки.' },
   { id: 'g_will', x: 0, y: -190, label: 'Воля', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Интуиция: 1 }, description: 'Общий. +1 к спасброскам воли/Интуиции.' },
-  { id: 'g_grit', x: 190, y: 0, label: 'Закалка', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Порог: 1 }, description: 'Общий. +1 к Порогу ранений.' },
+  { id: 'g_grit', x: 190, y: 0, label: 'Закалка', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Ранения: 1 }, description: 'Общий. +1 к макс. ранам.' },
   { id: 'g_swift', x: 0, y: 190, label: 'Проворство', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Шаг: 1 }, description: 'Общий. +1 к Шагу.' },
   { id: 'g_lore', x: -190, y: 0, label: 'Эрудиция', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { 'Поиск Информации': 1 }, description: 'Общий. +1 к Поиску информации.' },
 
@@ -56,11 +56,11 @@ const nodes: SkillNode[] = [
 
   // Волшебство + суб-типы
   { ...school('sch_wizardry', -520, -300, 'Волшебство', 'magic', 'Академическая магия (Разум). База маг-профессий.'), requirements: { parentIds: ['spec_magic'], requiredSpecialization: { zone: 'magic', level: 1 } } },
-  { id: 'ts_concentration', x: -500, y: -180, label: 'Концентрация', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_wizardry'], requiredSpecialization: { zone: 'magic', level: 2 } }, statModifiers: { 'Лимит ОС': 1 }, description: '+1 к лимиту ОС.' },
+  { id: 'ts_concentration', x: -500, y: -180, label: 'Концентрация', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_wizardry'], requiredSpecialization: { zone: 'magic', level: 2 } }, statModifiers: { Усталость: 1 }, description: '+1 к макс. усталости.' },
   { id: 'feat_spellpower', x: -620, y: -140, label: 'Сила заклинаний', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_concentration'], requiredSpecialization: { zone: 'magic', level: 3 } }, description: 'Черта. Раз за бой игнорируй ограничение геометрии каскада.' },
-  { id: 'secret_truename', x: -740, y: -180, label: 'Истинное Имя', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 2 }, isSecret: true, secretHint: 'Требуется 5 ур. Дара Медведя и Концентрация.', requirements: { parentIds: ['ts_concentration'], requiredSpecialization: { zone: 'magic', level: 5 } }, statModifiers: { 'Лимит ОС': 2 }, description: 'Секрет. Раз за бой игнорируй беклеш.' },
+  { id: 'secret_truename', x: -740, y: -180, label: 'Истинное Имя', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 2 }, isSecret: true, secretHint: 'Требуется 5 ур. Дара Медведя и Концентрация.', requirements: { parentIds: ['ts_concentration'], requiredSpecialization: { zone: 'magic', level: 5 } }, statModifiers: { Усталость: 2 }, description: 'Секрет. Раз за бой игнорируй откат приёма (+1 усталости).' },
   prof('st_necromancer', -700, -320, 'Некромант', 'magic', 'sch_wizardry', 'Суб-тип Волшебства: смерть, нежить, истощение.'),
-  prof('st_bloodmage', -720, -400, 'Кровавый маг', 'magic', 'sch_wizardry', 'Суб-тип: питает Квель здоровьем, больше ОС ценой ран.'),
+  prof('st_bloodmage', -720, -400, 'Кровавый маг', 'magic', 'sch_wizardry', 'Суб-тип: питает Квель ранами, больше усталости за мощь.'),
   prof('st_chronomancer', -620, -460, 'Хрономант', 'magic', 'sch_wizardry', 'Суб-тип: время — замедление/ускорение, доп. действия.'),
   prof('st_illusionist', -540, -440, 'Иллюзионист', 'magic', 'sch_wizardry', 'Суб-тип: обман чувств, ослепление, невидимость.'),
   prof('st_geomancer', -820, -360, 'Геомант', 'magic', 'sch_wizardry', 'Суб-тип: земля/камень, зоны, укрепления.'),
@@ -80,14 +80,26 @@ const nodes: SkillNode[] = [
   { id: 'spec_strength', x: 340, y: -340, label: 'Дар Зюбания', zone: 'strength', category: 'specialization', cost: { type: 'OR', amount: 2 }, level: 0, maxLevel: 10, requirements: { parentIds: ['center_start'] }, description: 'Ближний бой. Боевые Формы (Квель воина). До 10 за ОР.' },
   { ...school('sch_berserk', 520, -300, 'Берсерк', 'strength', 'Форма Ярости: урон ценой защиты.'), requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'strength', level: 1 } } },
   { id: 'ts_rage', x: 680, y: -260, label: 'Ярость', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_berserk'], requiredSpecialization: { zone: 'strength', level: 2 } }, statModifiers: { 'Ближний бой (Мощь)': 1 }, description: '+1 к урону ближнего боя; -1 КБ в стойке.' },
-  { ...school('sch_awaken', 560, -440, 'Высвобождение', 'strength', 'Форма Пробуждения: лимит ОС растёт в бою.'), requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'strength', level: 2 } } },
-  { id: 'feat_awaken', x: 720, y: -460, label: 'Пробуждение', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['sch_awaken'], requiredSpecialization: { zone: 'strength', level: 4 } }, description: 'Черта. Лимит ОС +1 в начале каждого твоего хода (разгон).' },
+  { ...school('sch_awaken', 560, -440, 'Высвобождение', 'strength', 'Форма Пробуждения: усталость сбрасывается быстрее в бою.'), requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'strength', level: 2 } } },
+  { id: 'feat_awaken', x: 720, y: -460, label: 'Пробуждение', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['sch_awaken'], requiredSpecialization: { zone: 'strength', level: 4 } }, description: 'Черта. В начале хода сними 1 усталость (разгон).' },
   { ...school('sch_smith', 420, -520, 'Кузнечное дело', 'strength', 'Рунщик: руны = холодные сигилы, зачарование оружия.'), requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'strength', level: 1 } } },
   { id: 'ts_runeforge', x: 520, y: -640, label: 'Рунная ковка', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_smith'], requiredSpecialization: { zone: 'strength', level: 2 } }, statModifiers: { Ремесло: 1 }, description: 'Наноси руну (холодный сигил) на снаряжение.' },
   { ...school('sch_toughness', 300, -560, 'Стойкость', 'strength', 'Живучесть: порог ран, кости здоровья.'), requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'strength', level: 1 } } },
-  { id: 'ts_toughskin', x: 340, y: -700, label: 'Толстая кожа', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_toughness'], requiredSpecialization: { zone: 'strength', level: 2 } }, statModifiers: { Порог: 2 }, description: '+2 к Порогу ранений.' },
+  { id: 'ts_toughskin', x: 340, y: -700, label: 'Толстая кожа', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_toughness'], requiredSpecialization: { zone: 'strength', level: 2 } }, statModifiers: { Ранения: 2 }, description: '+2 к макс. ранам.' },
   { id: 'ts_multihit', x: 200, y: -640, label: 'Второе дыхание', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['sch_toughness'], requiredSpecialization: { zone: 'strength', level: 4 } }, description: '+1 к максимуму Ран (вторая кость здоровья).' },
   { id: 'feat_battlemage', x: 0, y: -520, label: 'Боевой маг', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'magic', level: 2 } }, description: 'Черта. Требует Дар Зюбания + 2 ур. Дара Медведя. Аспект на оружие/пули.' },
+
+  // ════════ ВИЭТ — боевое искусство (Дар Зюбания) ═══════════
+  { ...school('sch_viet', 180, -420, 'Виэт', 'strength', 'Боевое искусство: стойки, натиск, контроль дистанции.'), requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'strength', level: 1 } } },
+  { id: 'ts_viet_stance_def', x: 80, y: -520, label: 'Стойка Змеи', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_viet'], requiredSpecialization: { zone: 'strength', level: 2 } }, description: 'Оборона: +1 КБ; парирование с преимуществом.' },
+  { id: 'ts_viet_stance_assault', x: 200, y: -560, label: 'Стойка Натиска', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_viet'], requiredSpecialization: { zone: 'strength', level: 2 } }, description: 'Атака: быстрая атака с преимуществом после рывка.' },
+  { id: 'feat_viet_thunder', x: 300, y: -480, label: 'Громовой клинок', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_viet'], requiredSpecialization: { zone: 'strength', level: 2 } }, description: 'Фокус: зарядить клинок. Быстрая атака +1 рана по металлическим целям.' },
+  { id: 'feat_viet_charge', x: 280, y: -620, label: 'Натиск', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_viet_stance_assault'], requiredSpecialization: { zone: 'strength', level: 3 } }, description: 'Приём (карта). Рывок + удар, усталость 2.' },
+  { id: 'ts_viet_wounding', x: 100, y: -640, label: 'Ранящий стиль', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_viet_stance_def'], requiredSpecialization: { zone: 'strength', level: 3 } }, description: 'Успешная быстрая атака — кровотечение (1 рана в начале хода цели, 1 раунд).' },
+  { id: 'ts_viet_stance_trick', x: 160, y: -480, label: 'Обманная стойка', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_viet'], requiredSpecialization: { zone: 'strength', level: 2 } }, description: 'Третья стойка: враги атакуют с помехой; «гадости» дуэлянта сильнее.' },
+  { id: 'feat_viet_disarm', x: 240, y: -520, label: 'Обезоруживание', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_viet_stance_trick'], requiredSpecialization: { zone: 'strength', level: 3 } }, description: 'Действие: выбить оружие после успешной атаки с преимуществом в Обманной стойке.' },
+  { id: 'feat_viet_rook', x: 60, y: -600, label: 'Рокировка', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_viet_stance_def'], requiredSpecialization: { zone: 'strength', level: 4 } }, description: 'Реакция: обмен местами с союзником в соседней клетке — атака перенаправлена.' },
+  { id: 'feat_viet_hare', x: 200, y: -700, label: 'Зайчик', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_viet_stance_trick'], requiredSpecialization: { zone: 'strength', level: 4 } }, description: 'Фокус: отражённый луч / вспышка — цель слепа на 1 раунд (спасбросок).' },
 
   // ════════ ДАР ЗМЕЯ — ЛОВКОСТЬ (зелёный) ══════════════════
   { id: 'spec_dexterity', x: 340, y: 340, label: 'Дар Змея', zone: 'dexterity', category: 'specialization', cost: { type: 'OR', amount: 2 }, level: 0, maxLevel: 10, requirements: { parentIds: ['center_start'] }, description: 'Ловкость. Дальний бой, дуэль, скрытность, Перо. До 10 за ОР.' },
@@ -99,12 +111,24 @@ const nodes: SkillNode[] = [
   { ...school('sch_stealth', 420, 540, 'Скрытность', 'dexterity', 'Путь тени: невидимость, первый удар.'), requirements: { parentIds: ['spec_dexterity'], requiredSpecialization: { zone: 'dexterity', level: 1 } } },
   { id: 'ts_shadowstrike', x: 560, y: 620, label: 'Удар из тени', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_stealth'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, statModifiers: { Скрытность: 1 }, description: '+1 к Скрытности; урон из невидимости с преимуществом.' },
   { ...school('sch_acrobatics', 300, 560, 'Акробатика', 'dexterity', 'Подвижность, уклонение, инициатива.'), requirements: { parentIds: ['spec_dexterity'], requiredSpecialization: { zone: 'dexterity', level: 1 } } },
-  { id: 'ts_evasion', x: 340, y: 700, label: 'Уклонение', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_acrobatics'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, statModifiers: { КБ: 1 }, description: '+1 к КБ.' },
+  { id: 'ts_evasion', x: 340, y: 700, label: 'Уклонение', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_acrobatics'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, statModifiers: { Уклонение: 1 }, description: '+1 к Уклонению (КБ).' },
   // Перо + суб-типы
   { ...school('sch_pero', 540, 600, 'Перо', 'dexterity', 'Мастерство знаков и образов (Моторика).'), requirements: { parentIds: ['spec_dexterity'], requiredSpecialization: { zone: 'dexterity', level: 1 } } },
   prof('st_scribe', 700, 600, 'Печатник Туо', 'dexterity', 'sch_pero', 'Суб-тип: печати Туо — быстрое черчение боевых знаков.'),
   prof('st_runescribe', 720, 680, 'Рунописец', 'dexterity', 'sch_pero', 'Суб-тип: руны-ловушки и отложенные эффекты.'),
   prof('st_artist', 600, 720, 'Художник', 'dexterity', 'sch_pero', 'Суб-тип: живые образы, иллюзии через рисунок.'),
+
+  // ════════ КИБЕРНЕТИКА — импланты (Дар Змея) ═════════════════
+  { ...school('sch_cybernetics', 180, 420, 'Кибернетика', 'dexterity', 'Импланты, протоколы, боевая аугментация (джухдес).'), requirements: { parentIds: ['spec_dexterity'], requiredSpecialization: { zone: 'dexterity', level: 1 } } },
+  { id: 'feat_cyb_cold', x: 60, y: 480, label: 'Хладнокровный', zone: 'dexterity', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['sch_cybernetics'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, description: 'Черта. Иммунитет к очарованию и страху.' },
+  { id: 'ts_cyb_analysis', x: 180, y: 520, label: 'Тактический анализ', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_cybernetics'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, statModifiers: { Анализ: 2 }, description: '+2 Анализ (сенсорный имплант).' },
+  { id: 'feat_cyb_glitch', x: 300, y: 480, label: 'Сбой протокола', zone: 'dexterity', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_cybernetics'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, description: 'Черта. При провале с «1» на к6 — брось к4: 1–2 имплант даёт сбой.' },
+  { id: 'ts_cyb_overclock', x: 120, y: 620, label: 'Разгон', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_cyb_analysis'], requiredSpecialization: { zone: 'dexterity', level: 3 } }, description: 'Открывает приём «Ускорение» (карта).' },
+  { id: 'ts_cyb_ordnance', x: 260, y: 640, label: 'Орудийный модуль', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_cybernetics'], requiredSpecialization: { zone: 'dexterity', level: 3 } }, statModifiers: { 'Дальний бой': 1 }, description: 'Встроенное оружие. Карты: бомба, обстрел, деструкция.' },
+  { id: 'ts_cyb_plating', x: 360, y: 680, label: 'Бронепластины', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_cyb_ordnance'], requiredSpecialization: { zone: 'dexterity', level: 4 } }, statModifiers: { Броня: 1 }, description: '+1 к броне (встроенная). Суммируется с полем «Броня +» в Sidebar.' },
+  { id: 'feat_cyb_nanites', x: 400, y: 560, label: 'Нанорой', zone: 'dexterity', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_cyb_overclock'], requiredSpecialization: { zone: 'dexterity', level: 4 } }, description: 'Раз за отдых сними 1 рану без магии. В бою — +1 к спасброскам от яда/болезни.' },
+  { id: 'ts_cyb_ecm', x: 320, y: 720, label: 'РЭБ-модуль', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['feat_cyb_glitch'], requiredSpecialization: { zone: 'dexterity', level: 3 } }, statModifiers: { Уклонение: 1 }, description: '+1 Уклонение против дальнего огня и наведённых систем.' },
+  { id: 'feat_cyb_optics', x: 440, y: 640, label: 'Оптический пакет', zone: 'dexterity', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_cyb_analysis'], requiredSpecialization: { zone: 'dexterity', level: 3 } }, description: 'Фокус: тепловизор и «рентген» лёгких укрытий; скан с усталостью 1 на 1 раунд.' },
 
   // ════════ ДАР ГОЛУБЯ — МУДРОСТЬ / СТЕРЖЕНЬ (янтарный) ═════
   { id: 'spec_wisdom', x: -340, y: 340, label: 'Дар Голубя', zone: 'wisdom', category: 'specialization', cost: { type: 'OR', amount: 2 }, level: 0, maxLevel: 10, requirements: { parentIds: ['center_start'] }, description: 'Мудрость (Стержень). Влияние, воля, интуитивная/звериная магия. До 10 за ОР.' },
@@ -112,7 +136,18 @@ const nodes: SkillNode[] = [
   { ...school('sch_witchcraft', -520, 300, 'Колдовство', 'wisdom', 'Интуитивная магия (Стержень).'), requirements: { parentIds: ['spec_wisdom'], requiredSpecialization: { zone: 'wisdom', level: 1 } } },
   { id: 'ts_pact', x: -680, y: 260, label: 'Пакт', zone: 'wisdom', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_witchcraft'], requiredSpecialization: { zone: 'wisdom', level: 2 } }, statModifiers: { Колдовство: 1 }, description: '+1 к Колдовству; дешёвая заморозка холодных.' },
   prof('st_warlock', -700, 340, 'Колдун', 'wisdom', 'sch_witchcraft', 'Суб-тип: канал покровителя, узкий домен, дешёвая заморозка.'),
+  { id: 'feat_wlk_patron_ray', x: -780, y: 300, label: 'Дар покровителя', zone: 'wisdom', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['st_warlock'], requiredSpecialization: { zone: 'wisdom', level: 2 } }, description: 'Фокус: луч покровителя (урон на дистанции). Быстрая атака = 1 рана, 6 клеток.' },
+  { id: 'ts_wlk_occult', x: -860, y: 280, label: 'Оккультные знания', zone: 'wisdom', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['feat_wlk_patron_ray'], requiredSpecialization: { zone: 'wisdom', level: 3 } }, statModifiers: { 'Поиск Информации': 1, Колдовство: 1 }, description: 'Дар знаний: +1 к поиску и колдовству; фокус — вспомнить лор о сущности/артефакте.' },
+  { id: 'feat_wlk_devils_sight', x: -760, y: 380, label: 'Истинное зрение', zone: 'wisdom', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['st_warlock'], requiredSpecialization: { zone: 'wisdom', level: 2 } }, description: 'Черта. Видишь в темноте и сквозь иллюзии низкого ранга (фокус).' },
+  { id: 'ts_wlk_hex', x: -840, y: 360, label: 'Мастерство сглаза', zone: 'wisdom', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['feat_wlk_devils_sight'], requiredSpecialization: { zone: 'wisdom', level: 3 } }, description: 'Открывает приём «Сглаз». На слабых (аура) — фокус-проклятие без карты.' },
+  { id: 'feat_wlk_tongues', x: -920, y: 320, label: 'Языки пакта', zone: 'wisdom', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_wlk_hex'], requiredSpecialization: { zone: 'wisdom', level: 4 } }, description: 'Приём «Глоссолалия» или авто-язык на слабых. Равный — только карта/проверка.' },
   prof('st_sorcerer', -720, 420, 'Чародей', 'wisdom', 'sch_witchcraft', 'Суб-тип: мгновенный живой каст, мало холодных.'),
+  { id: 'ts_sor_font', x: -800, y: 440, label: 'Источник силы', zone: 'wisdom', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['st_sorcerer'], requiredSpecialization: { zone: 'wisdom', level: 2 } }, statModifiers: { Усталость: 1 }, description: '+1 к макс. усталости. Раз за отдых сбрось 2 усталости бесплатно.' },
+  { id: 'feat_sor_metamagic', x: -880, y: 480, label: 'Метамагия', zone: 'wisdom', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_sor_font'], requiredSpecialization: { zone: 'wisdom', level: 3 } }, description: 'Раз за ход: перебрось Куб Стиля или удвой дистанцию фокуса (+1 усталость).' },
+  { id: 'ts_sor_draconic', x: -740, y: 500, label: 'Драконья кровь', zone: 'wisdom', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['st_sorcerer'], requiredSpecialization: { zone: 'wisdom', level: 2 } }, statModifiers: { Ранения: 1 }, description: '+1 к макс. ранам. Фокус: чешуйчатый блеск; приём «Крылья» — усталость 1.' },
+  { id: 'feat_divine_channel', x: -820, y: 540, label: 'Божественный канал', zone: 'wisdom', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_sor_draconic'], requiredSpecialization: { zone: 'wisdom', level: 3 } }, description: 'Черта (Divine Magic). Одно «жреческое» заклинание как приём, усталость 1.' },
+  { id: 'feat_fate_guard', x: -900, y: 560, label: 'Охрана судьбы', zone: 'wisdom', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['feat_sor_metamagic'], requiredSpecialization: { zone: 'wisdom', level: 4 } }, description: 'Раз за отдых: +1к4 к своему или чужому броску атаки/спаса.' },
+  { id: 'feat_sor_subtle', x: -960, y: 500, label: 'Незаметное колдовство', zone: 'wisdom', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['feat_sor_metamagic'], requiredSpecialization: { zone: 'wisdom', level: 4 } }, description: 'Фокус/приём без жестов и слов; в социалке +2 к скрытому касту.' },
   prof('st_pactmaker', -640, 180, 'Пактер', 'wisdom', 'sch_witchcraft', 'Суб-тип: сделки с сущностями за силу.'),
   prof('st_summoner', -800, 300, 'Призыватель', 'wisdom', 'sch_witchcraft', 'Суб-тип: вызов существ-союзников.'),
   // Псионика
@@ -135,7 +170,7 @@ const nodes: SkillNode[] = [
     description: 'Слот Черты. Доступен раз в 4 уровня. Открывает выбор черты.',
     choices: [{
       id: 'feat', title: 'Выбери черту', pick: 1, options: [
-        opt('Толстая кожа', '+1 к Порогу ранений'),
+        opt('Толстая кожа', '+1 к макс. ранам'),
         opt('Меткий стрелок', '+1 к Дальнему бою'),
         opt('Живучий', '+1 к максимуму Ран'),
         opt('Внимательный', '+1 к Внимательности/инициативе'),
@@ -185,11 +220,17 @@ function addRoad(
   });
 }
 
+addRoad('sch_witchcraft', -520, 300, 'wisdom', [
+  { t: 's', label: '+1 Колдовство', mods: { Колдовство: 1 } },
+  { t: 's', label: '+1 Интуиция', mods: { Интуиция: 1 } },
+  { t: 'n', label: 'Холодный пакт', desc: 'Раз за бой подготовь приём без +1 усталости.' },
+  { t: 'k', label: 'Воля покровителя', desc: 'Раз за отдых игнорируй «1» на Кубе Стиля на одном касте.' },
+]);
 addRoad('sch_wizardry', -520, -300, 'magic', [
   { t: 's', label: '+1 Волшебство', mods: { Волшебство: 1 } },
-  { t: 's', label: '+1 Лимит ОС', mods: { 'Лимит ОС': 1 } },
-  { t: 'n', label: 'Эхо заклинания', desc: 'Раз в ход повтори последний Сигил урона за -1 ОС.' },
-  { t: 'k', label: 'Разум как броня', desc: 'Порог тратится как ОС, но урон бьёт по ОС раньше хитов.' },
+  { t: 's', label: '+1 усталость', mods: { Усталость: 1 } },
+  { t: 'n', label: 'Эхо заклинания', desc: 'Раз в ход повтори последний Сигил урона без +1 усталости.' },
+  { t: 'k', label: 'Разум как броня', desc: 'Раз за бой перенаправь 1 рану в +1 усталость вместо раны.' },
 ]);
 addRoad('sch_berserk', 520, -300, 'strength', [
   { t: 's', label: '+1 урон б.боя', mods: { 'Ближний бой (Мощь)': 1 } },
@@ -210,7 +251,7 @@ addRoad('sch_divine', -420, 560, 'wisdom', [
   { t: 'k', label: 'Обет исцеления', desc: 'Лечение мгновенно и вдвое, но сам не лечишься в отдых.' },
 ]);
 addRoad('sch_toughness', 300, -560, 'strength', [
-  { t: 's', label: '+1 Порог', mods: { Порог: 1 } },
+  { t: 's', label: '+1 раны', mods: { Ранения: 1 } },
   { t: 's', label: '+1 Выживание', mods: { Выживание: 1 } },
   { t: 'n', label: 'Крепкий орешек', desc: '+1 к максимуму Ран.' },
   { t: 'k', label: 'Несокрушимый', desc: 'Раз за бой игнорируй Рану, но макс Вдохновение -1.' },
@@ -221,8 +262,20 @@ addRoad('sch_stealth', 420, 540, 'dexterity', [
   { t: 'n', label: 'Мокрое дело', desc: 'Первый удар по не заметившему = крит.' },
   { t: 'k', label: 'Тень', desc: 'Невидим, пока не атаковал; выход даёт 1 бесплатный Сигил.' },
 ]);
+addRoad('sch_viet', 180, -420, 'strength', [
+  { t: 's', label: '+1 Ближний бой', mods: { 'Ближний бой (Мощь)': 1 } },
+  { t: 's', label: '+1 Уклонение', mods: { Уклонение: 1 } },
+  { t: 'n', label: 'Смена стойки', desc: 'Раз за раунд меняй стойку без траты действия.' },
+  { t: 'k', label: 'Поток Виэт', desc: 'После парирования — контратака без усталости (1/бой).' },
+]);
+addRoad('sch_cybernetics', 180, 420, 'dexterity', [
+  { t: 's', label: '+1 Импланты', mods: { Импланты: 1 } },
+  { t: 's', label: '+1 ЭлектроМех', mods: { ЭлектроМех: 1 } },
+  { t: 'n', label: 'Тепловизор', desc: 'Фокус: видишь тепло сквозь дым и лёгкие укрытия.' },
+  { t: 'k', label: 'Полный разгон', desc: 'Раз за бой удвой шаг и 2 быстрые атаки; после — усталость 3.' },
+]);
 
-// Рёбра выводим автоматически из parentIds (плюс явные для центра/специализаций).
+// Рёбра выводим автоматически из parentIds
 const edges: SkillEdge[] = [];
 for (const n of nodes) {
   const parents = n.requirements?.parentIds ?? [];

@@ -242,7 +242,7 @@ export function EditorPanel({ selectedId, setSelectedId }: Props) {
             Модификаторы (ключ:значение, через запятую)
             <input
               value={statsText}
-              placeholder="Разум:1, Лимит ОС:2"
+              placeholder="Разум:1, Усталость:2, Ранения:1"
               onChange={(e) => {
                 setStatsText(e.target.value);
                 patch(node.id, { statModifiers: textToStats(e.target.value) });

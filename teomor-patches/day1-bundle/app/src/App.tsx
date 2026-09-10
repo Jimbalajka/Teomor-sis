@@ -5,8 +5,12 @@ import { SkillTree } from './SkillTree';
 import { Sidebar } from './Sidebar';
 import { CharacterSheet } from './CharacterSheet';
 import { CardsView } from './CardsView';
+import { ConstructorView } from './ConstructorView';
+import { RulesView } from './RulesView';
+import { GMView } from './GMView';
+import type { View } from './views';
 
-export type View = 'tree' | 'sheet' | 'cards';
+export type { View } from './views';
 
 export default function App() {
   const [editMode, setEditMode] = useState(false);
@@ -29,6 +33,9 @@ export default function App() {
           )}
           {view === 'sheet' && <CharacterSheet />}
           {view === 'cards' && <CardsView />}
+          {view === 'constructor' && <ConstructorView />}
+          {view === 'rules' && <RulesView />}
+          {view === 'gm' && <GMView />}
         </main>
       </div>
     </SkillTreeProvider>
