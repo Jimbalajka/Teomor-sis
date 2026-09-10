@@ -6,7 +6,6 @@ import {
   saveCatalogToStorage,
   type GameCard,
 } from './cardsData';
-import { RulesPanel } from './RulesPanel';
 import { useSkillTree } from './SkillTreeContext';
 import type { ZoneType } from './types';
 
@@ -133,7 +132,6 @@ export function ConstructorView() {
           </div>
         </div>
       )}
-      <RulesPanel />
     </div>
   );
 }

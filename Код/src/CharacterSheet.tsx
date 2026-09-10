@@ -60,6 +60,7 @@ export function CharacterSheet() {
     if (node.category === 'specialization') {
       quels.push(`${node.label} (ур ${state.specializationLevels[node.zone] ?? 0})`);
     }
+    if (node.category === 'feat') feats.push(node.label);
     const picks = state.nodeChoices[id] ?? [];
     for (const c of node.choices ?? []) {
       const chosen = picks.filter((p) => c.options.some((o) => o.id === p));
@@ -105,6 +106,15 @@ export function CharacterSheet() {
           </span>
         </div>
       </div>
+
+      {Object.keys(totalStatModifiers).length > 0 && (
+        <div className="sheet-tree-mods panel">
+          <b>Бонусы из древа:</b>{' '}
+          {Object.entries(totalStatModifiers)
+            .map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`)
+            .join(' · ')}
+        </div>
+      )}
 
       {(quels.length || aspects.length || sigils.length || feats.length || crafts.length) > 0 && (
         <div className="sheet-derived-choices panel">

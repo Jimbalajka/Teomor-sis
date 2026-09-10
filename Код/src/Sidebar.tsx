@@ -58,6 +58,12 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
         >
           Конструктор
         </button>
+        <button
+          className={`btn ${view === 'rules' ? 'btn-primary' : ''}`}
+          onClick={() => onView('rules')}
+        >
+          Правила
+        </button>
       </div>
 
       <section className="panel playtest-panel">

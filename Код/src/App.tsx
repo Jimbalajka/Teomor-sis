@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar';
 import { CharacterSheet } from './CharacterSheet';
 import { CardsView } from './CardsView';
 import { ConstructorView } from './ConstructorView';
+import { RulesView } from './RulesView';
 import type { View } from './views';
 
 export type { View } from './views';
@@ -32,6 +33,7 @@ export default function App() {
           {view === 'sheet' && <CharacterSheet />}
           {view === 'cards' && <CardsView />}
           {view === 'constructor' && <ConstructorView />}
+          {view === 'rules' && <RulesView />}
         </main>
       </div>
     </SkillTreeProvider>
