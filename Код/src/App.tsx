@@ -25,7 +25,7 @@ export default function App() {
           view={view}
           onView={setView}
         />
-        <main className="canvas">
+        <main className={`canvas${view === 'tree' ? ' canvas-tree' : ''}`}>
           {view === 'tree' && (
             <ReactFlowProvider>
               <SkillTree editMode={editMode} />

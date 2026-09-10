@@ -3,21 +3,37 @@ import clsx from 'clsx';
 import type { SkillNode } from './types';
 import { useSkillTree } from './SkillTreeContext';
 import { blockReason, getNodeStatus, isHiddenSecret } from './nodeStatus';
+import { nodeBonusLine, nodeVisualTier } from './nodeLabels';
+import { isNodeDimmed } from './treeView';
 
-// Данные, которые мы кладём в каждый узел React Flow.
 export type SkillNodeData = { node: SkillNode };
 
 export function CustomSkillNode({ data }: NodeProps) {
   const { node } = data as unknown as SkillNodeData;
-  const { state, treeData } = useSkillTree();
+  const {
+    state,
+    treeData,
+    treeFocus,
+    showRouteHighlight,
+    routeHighlight,
+  } = useSkillTree();
 
   const status = getNodeStatus(node, state, treeData);
   const hidden = isHiddenSecret(node, state);
   const reason = blockReason(node, state, treeData);
+  const bonus = hidden ? null : nodeBonusLine(node, state);
+  const tier = nodeVisualTier(node);
+  const dimmed = isNodeDimmed(node, treeFocus, state, treeData);
+  const onRoute = showRouteHighlight && routeHighlight.has(node.id);
+
   const specLevel =
     node.category === 'specialization'
       ? state.specializationLevels[node.zone] ?? 0
       : undefined;
+
+  const isKeystone =
+    node.description?.includes('Оплот') ||
+    (node.category === 'feat' && !!node.exclusiveGroup && tier === 'large');
 
   return (
     <div
@@ -25,6 +41,7 @@ export function CustomSkillNode({ data }: NodeProps) {
         'node',
         `zone-${node.zone}`,
         `status-${status}`,
+        `node-tier-${tier}`,
         node.category === 'root' && 'node-root',
         node.category === 'specialization' && 'node-spec node-diamond',
         node.category === 'feat' && 'node-feat',
@@ -34,7 +51,10 @@ export function CustomSkillNode({ data }: NodeProps) {
           node.category === 'transit_specialized') &&
           'node-transit',
         node.id.startsWith('bridge_') && 'node-bridge',
+        isKeystone && 'node-keystone',
         hidden && 'node-secret',
+        dimmed && 'node-dimmed',
+        onRoute && 'node-route',
       )}
     >
       <Handle type="target" position={Position.Top} className="handle" />
@@ -42,12 +62,12 @@ export function CustomSkillNode({ data }: NodeProps) {
 
       <span className="node-label">
         {hidden ? '?' : node.label}
+        {bonus && !hidden && <span className="node-bonus">{bonus}</span>}
         {specLevel !== undefined && !hidden && (
           <span className="node-level">{specLevel}/10</span>
         )}
       </span>
 
-      {/* Тултип */}
       <div className="tooltip">
         {hidden ? (
           <p className="tooltip-secret">🔒 {node.secretHint}</p>

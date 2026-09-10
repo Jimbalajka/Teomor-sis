@@ -17,6 +17,8 @@ import { EditorPanel } from './EditorPanel';
 import { RaceModal } from './RaceModal';
 import { ChoiceModal } from './ChoiceModal';
 import { getNodeStatus } from './nodeStatus';
+import { SkillTreeToolbar } from './SkillTreeToolbar';
+import { isEdgeOnRoute } from './treeView';
 import type { SkillNode, SkillTreeData, ZoneType } from './types';
 
 const nodeTypes = { skill: CustomSkillNode };
@@ -40,7 +42,14 @@ function buildNodes(treeData: SkillTreeData): Node[] {
 }
 
 export function SkillTree({ editMode }: { editMode: boolean }) {
-  const { treeData, setTreeData, state, dispatch } = useSkillTree();
+  const {
+    treeData,
+    setTreeData,
+    state,
+    dispatch,
+    showRouteHighlight,
+    routeHighlight,
+  } = useSkillTree();
   const [nodes, setNodes, onNodesChange] = useNodesState(buildNodes(treeData));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showRaceModal, setShowRaceModal] = useState(false);
@@ -58,21 +67,25 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         const targetStatus = target ? getNodeStatus(target, state, treeData) : 'locked';
         const targetUnlocked = state.allocatedNodes.includes(e.to);
         const color = target ? zoneEdgeColor[target.zone] : '#9ca3af';
+        const onRoute =
+          showRouteHighlight && isEdgeOnRoute(e.from, e.to, routeHighlight);
+        const dimRoute = showRouteHighlight && routeHighlight.size > 0 && !onRoute;
         return {
           id: `${e.from}-${e.to}`,
           source: e.from,
           target: e.to,
           type: 'floating',
-          animated: targetStatus === 'available',
+          animated: !showRouteHighlight && targetStatus === 'available',
+          className: onRoute ? 'edge-route' : dimRoute ? 'edge-dimmed' : undefined,
           style: {
-            stroke: targetUnlocked ? color : '#4b5563',
-            strokeWidth: targetUnlocked ? 3 : 1.5,
-            strokeDasharray: targetUnlocked ? undefined : '6 6',
-            filter: targetUnlocked ? `drop-shadow(0 0 4px ${color})` : undefined,
+            stroke: onRoute ? '#facc15' : targetUnlocked ? color : '#4b5563',
+            strokeWidth: onRoute ? 3.5 : targetUnlocked ? 2.5 : 1,
+            strokeDasharray: targetUnlocked || onRoute ? undefined : '6 6',
+            opacity: dimRoute ? 0.12 : 1,
           },
         };
       }),
-    [treeData, state],
+    [treeData, state, showRouteHighlight, routeHighlight],
   );
 
   const onNodeClick = useCallback(
@@ -154,7 +167,7 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
 
   return (
     <div className="tree-canvas-wrap">
-      <div className="tree-zone-bg" aria-hidden />
+      <SkillTreeToolbar />
       <div className="tree-zone-legend">
         <span className="legend-magic">◆ Медведь · Разум</span>
         <span className="legend-strength">◆ Зюбания · Сила</span>
