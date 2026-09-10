@@ -24,7 +24,8 @@ import {
 } from './coreRules';
 
 const LS_STATE = 'teomor_skill_tree_state_v4';
-const LS_DATA = 'teomor_skill_tree_data_v6';
+const LS_DATA = 'teomor_skill_tree_data_v7';
+const TREE_BUILD = '20260328-all-branches';
 
 const defaultState: SkillTreeState = {
   level: 0,
@@ -339,8 +340,16 @@ function loadState(): SkillTreeState {
 
 function loadTree(): SkillTreeData {
   try {
+    // Сброс устаревшего древа из localStorage после обновления билда
+    for (const legacy of ['teomor_skill_tree_data_v6', 'teomor_skill_tree_data_v5', 'teomor_skill_tree_data_v4']) {
+      localStorage.removeItem(legacy);
+    }
+    const build = localStorage.getItem('teomor_tree_build');
     const raw = localStorage.getItem(LS_DATA);
-    if (!raw) return initialSkillTree;
+    if (!raw || build !== TREE_BUILD) {
+      localStorage.setItem('teomor_tree_build', TREE_BUILD);
+      return initialSkillTree;
+    }
     const parsed = JSON.parse(raw) as SkillTreeData;
     if (parsed?.nodes && parsed?.edges) {
       return {
