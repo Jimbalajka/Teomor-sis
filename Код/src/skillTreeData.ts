@@ -1,4 +1,5 @@
 import type { SkillTreeData, SkillNode, SkillEdge } from './types';
+import { applyPoeLayout } from './treeLayout';
 
 // Древо «Теомор». Специализации (Дары) — прямо от центра. Внутри Дара: школы
 // (subcategory) = пути Квеля; под школами — суб-типы профессий (transit_specialized)
@@ -516,51 +517,10 @@ addRoadFork('sch_leader', -280, 560, 'wisdom', [
 ]);
 
 
-const LAYOUT_SCALE = 1.55;
-
-function scaleLayout(source: SkillNode[]): SkillNode[] {
-  return source.map((n) => ({
-    ...n,
-    x: Math.round(n.x * LAYOUT_SCALE),
-    y: Math.round(n.y * LAYOUT_SCALE),
-  }));
-}
-
-/** Раздвигает узлы, не трогая центр и специализации (Дары). */
-function relaxOverlaps(source: SkillNode[], minDist = 92, iterations = 12): SkillNode[] {
-  const out = source.map((n) => ({ ...n }));
-  const locked = new Set<SkillNode['category']>(['root', 'specialization']);
-  for (let iter = 0; iter < iterations; iter++) {
-    for (let i = 0; i < out.length; i++) {
-      for (let j = i + 1; j < out.length; j++) {
-        const dx = out[j].x - out[i].x;
-        const dy = out[j].y - out[i].y;
-        const d = Math.hypot(dx, dy) || 1;
-        if (d >= minDist) continue;
-        const push = (minDist - d) / 2 + 3;
-        const ux = dx / d;
-        const uy = dy / d;
-        if (!locked.has(out[i].category)) {
-          out[i].x -= Math.round(ux * push);
-          out[i].y -= Math.round(uy * push);
-        }
-        if (!locked.has(out[j].category)) {
-          out[j].x += Math.round(ux * push);
-          out[j].y += Math.round(uy * push);
-        }
-      }
-    }
-  }
-  return out;
-}
-
-function layoutNodes(source: SkillNode[]): SkillNode[] {
-  return relaxOverlaps(scaleLayout(source));
-}
 
 // Рёбра выводим автоматически из parentIds
 const edges: SkillEdge[] = [];
-const laidOutNodes = layoutNodes(nodes);
+const laidOutNodes = applyPoeLayout(nodes);
 for (const n of laidOutNodes) {
   const parents = n.requirements?.parentIds ?? [];
   for (const p of parents) edges.push({ from: p, to: n.id });

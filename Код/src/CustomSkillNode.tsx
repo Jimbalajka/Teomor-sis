@@ -26,7 +26,7 @@ export function CustomSkillNode({ data }: NodeProps) {
         `zone-${node.zone}`,
         `status-${status}`,
         node.category === 'root' && 'node-root',
-        node.category === 'specialization' && 'node-spec',
+        node.category === 'specialization' && 'node-spec node-diamond',
         node.category === 'feat' && 'node-feat',
         node.category === 'feat_slot' && 'node-featslot',
         node.category === 'craft_slot' && 'node-craftslot',

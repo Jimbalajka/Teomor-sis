@@ -167,6 +167,7 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         nodesConnectable={editMode}
         elementsSelectable={editMode}
         fitView
+        fitViewOptions={{ padding: 0.15, maxZoom: 1.1 }}
         minZoom={0.2}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
