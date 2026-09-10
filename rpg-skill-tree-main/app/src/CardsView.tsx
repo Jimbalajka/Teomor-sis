@@ -25,7 +25,11 @@ function loadCards(): GameCard[] {
     const raw = localStorage.getItem(LS_CARDS);
     if (!raw) return initialCards;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : initialCards;
+    if (!Array.isArray(parsed)) return initialCards;
+    return parsed.map((c: GameCard & { osLimit?: number }) => ({
+      ...c,
+      fatigueMax: c.fatigueMax ?? c.osLimit,
+    }));
   } catch {
     return initialCards;
   }
@@ -235,19 +239,19 @@ export function CardsView() {
                   />
                 </label>
                 <label>
-                  Лимит ОС
+                  Макс. усталость
                   <input
                     type="number"
-                    value={sel.osLimit ?? 2}
+                    value={sel.fatigueMax ?? 2}
                     onChange={(e) =>
-                      patch(sel.id, { osLimit: Number(e.target.value) })
+                      patch(sel.id, { fatigueMax: Number(e.target.value) })
                     }
                   />
                 </label>
               </div>
             ) : (
               <label>
-                Стоимость ОС
+                Усталость
                 <input
                   type="number"
                   value={sel.cost}

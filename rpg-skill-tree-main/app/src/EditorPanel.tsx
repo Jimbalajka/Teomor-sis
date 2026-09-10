@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSkillTree } from './SkillTreeContext';
 import type {
-  CostType,
   NodeCategory,
   NodeChoice,
   SkillNode,
@@ -96,7 +95,7 @@ export function EditorPanel({ selectedId, setSelectedId }: Props) {
       label: 'Новый узел',
       zone: 'center',
       category: 'transit_general',
-      cost: { type: 'transit', amount: 1 },
+      cost: { type: 'OR', amount: 1 },
       description: '',
     };
     setTreeData((prev) => ({ ...prev, nodes: [...prev.nodes, newNode] }));
@@ -216,35 +215,19 @@ export function EditorPanel({ selectedId, setSelectedId }: Props) {
             </label>
           </div>
 
-          <div className="editor-row">
-            <label>
-              Валюта
-              <select
-                value={node.cost.type}
-                onChange={(e) =>
-                  patch(node.id, {
-                    cost: { ...node.cost, type: e.target.value as CostType },
-                  })
-                }
-              >
-                <option value="OR">ОУ</option>
-                <option value="transit">ОО</option>
-              </select>
-            </label>
-            <label>
-              Цена
-              <input
-                type="number"
-                min={0}
-                value={node.cost.amount}
-                onChange={(e) =>
-                  patch(node.id, {
-                    cost: { ...node.cost, amount: Number(e.target.value) },
-                  })
-                }
-              />
-            </label>
-          </div>
+          <label>
+            Цена (ОР)
+            <input
+              type="number"
+              min={0}
+              value={node.cost.amount}
+              onChange={(e) =>
+                patch(node.id, {
+                  cost: { type: 'OR', amount: Number(e.target.value) },
+                })
+              }
+            />
+          </label>
 
           <label>
             Описание
@@ -259,7 +242,7 @@ export function EditorPanel({ selectedId, setSelectedId }: Props) {
             Модификаторы (ключ:значение, через запятую)
             <input
               value={statsText}
-              placeholder="Разум:1, Лимит ОС:2"
+              placeholder="Разум:1, Усталость:2, Ранения:1"
               onChange={(e) => {
                 setStatsText(e.target.value);
                 patch(node.id, { statModifiers: textToStats(e.target.value) });

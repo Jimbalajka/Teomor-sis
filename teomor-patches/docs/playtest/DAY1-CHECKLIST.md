@@ -1,15 +1,27 @@
-# День 1 — чеклист
+# День 1–4 — всё в одном чеклисте
 
-## Код (скопировать в app/src/)
-types.ts, treeEconomy.ts, SkillTreeContext.tsx, nodeStatus.ts, Sidebar.tsx, RulesPanel.tsx
+## Код
+Скопируй `day1-bundle/app/src/` → `app/src/`  
+`npm install && npm run build`
 
-## Правки руками
-- CustomSkillNode: «N ОР»
-- RaceModal: старт = TREE_ECONOMY.startOrPoints ОР
-- EditorPanel: одно поле цены ОР
-- sed transit→OR в skillTreeData.ts
-- npm run build
+## Документы (печать)
+- [ ] **CORE-ONEPAGE.md** — правила + 8 соц. примеров
+- [ ] **PAMYATKA-STOLA.md** — шпаргалка за столом
+- [ ] **SHEET-PRINT.md** — бумажный лист (раны/усталость)
+- [ ] **ABILITY-MAP.md** — таблица способностей троих
+- [ ] **PLAYTEST-GUIDE.md** — сценарий дня 4 + деплой
 
-## Документы
-- DAY1-CHARACTERS.md — каждому свой блок
-- PAMYATKA-STOLA.md — печать
+## Готово в коде
+- [x] ОР вместо ОУ/ОО
+- [x] Sidebar: КБ, раны, усталость
+- [x] Узлы Виэт, Кибернетика
+- [x] Черты чародея: Божественный канал, Охрана судьбы
+- [x] Карты: огненный шар, молния, глоссолалия, сглаз, контрмагия, киборг-пак
+
+## Деплой
+```bash
+cd day1-bundle/app && npm run build && npx vercel --prod
+```
+
+## День 4
+Рынок (соц.) + бой 2+1. Фикс багов на телефоне.

@@ -2,26 +2,29 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useReducer,
   useState,
   type ReactNode,
 } from 'react';
-import type {
-  SkillNode,
-  SkillTreeData,
-  SkillTreeState,
-  ZoneType,
-} from './types';
+import type { SkillNode, SkillTreeData, SkillTreeState, ZoneType } from './types';
+import { migrateLegacyPoints } from './types';
 import { initialSkillTree } from './skillTreeData';
 import { blockReason } from './nodeStatus';
 import { raceById } from './races';
 import { backgroundById } from './backgrounds';
+import { TREE_ECONOMY } from './treeEconomy';
+import {
+  computeFatigueMax,
+  computeKB,
+  computeWoundsMax,
+  defaultCombatState,
+  type CombatState,
+} from './coreRules';
 
-const LS_STATE = 'teomor_skill_tree_state_v2';
+const LS_STATE = 'teomor_skill_tree_state_v4';
 const LS_DATA = 'teomor_skill_tree_data_v6';
 
-// Старт: 0 уровень, раса не выбрана, очков нет, центр не активирован.
-// Активация центра (выбор расы) -> 1 уровень + стартовые очки.
 const defaultState: SkillTreeState = {
   level: 0,
   race: null,
@@ -35,8 +38,9 @@ const defaultState: SkillTreeState = {
     dexterity: 0,
     wisdom: 0,
   },
-  developmentPoints: 0,
-  transitPoints: 0,
+  orPoints: 0,
+  combat: defaultCombatState(0, {}),
+  armorBonus: 0,
   discoveredSecrets: [],
   nodeChoices: {},
 };
@@ -49,21 +53,41 @@ type Action =
   | { type: 'SET_NODE_CHOICE'; nodeId: string; optionIds: string[] }
   | { type: 'UPGRADE_SPECIALIZATION'; zone: ZoneType }
   | { type: 'DISCOVER_SECRET'; id: string }
-  | { type: 'GAIN_LEVEL' } // +1 ОУ и +2 ОО (симуляция левелапа)
+  | { type: 'GAIN_LEVEL' }
+  | { type: 'SET_ARMOR_BONUS'; value: number }
+  | { type: 'TAKE_WOUND'; amount?: number }
+  | { type: 'HEAL_WOUND'; amount?: number }
+  | { type: 'ADD_FATIGUE'; amount: number }
+  | { type: 'CLEAR_FATIGUE'; amount?: number }
+  | { type: 'REST' }
+  | { type: 'SYNC_COMBAT_LIMITS'; combat: Pick<CombatState, 'woundsMax' | 'fatigueMax'> }
   | { type: 'RESET' };
+
+function clampCombat(
+  combat: CombatState,
+  limits: Pick<CombatState, 'woundsMax' | 'fatigueMax'>,
+): CombatState {
+  return {
+    woundsMax: limits.woundsMax,
+    fatigueMax: limits.fatigueMax,
+    wounds: Math.min(combat.wounds, limits.woundsMax),
+    fatigue: Math.min(combat.fatigue, limits.fatigueMax),
+  };
+}
 
 function reducer(state: SkillTreeState, action: Action): SkillTreeState {
   switch (action.type) {
     case 'CHOOSE_RACE': {
-      if (state.level >= 1) return state; // раса выбирается только на старте
+      if (state.level >= 1) return state;
+      const combat = defaultCombatState(1, {});
       return {
         ...state,
         race: action.raceId,
         level: 1,
         allocatedNodes: ['center_start'],
-        developmentPoints: 2, // стартовые ОУ (хватает открыть 1 Дар)
-        transitPoints: 2, // стартовые ОО
+        orPoints: TREE_ECONOMY.startOrPoints,
         raceChoices: {},
+        combat,
       };
     }
 
@@ -81,8 +105,6 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
     case 'ALLOCATE_NODE': {
       const { node } = action;
       if (blockReason(node, state) !== null) return state;
-      const isOR = node.cost.type === 'OR';
-      // Открытие специализации сразу поднимает её ветку до 1 уровня.
       const specializationLevels =
         node.category === 'specialization'
           ? {
@@ -94,12 +116,7 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
         ...state,
         allocatedNodes: [...state.allocatedNodes, node.id],
         specializationLevels,
-        developmentPoints: isOR
-          ? state.developmentPoints - node.cost.amount
-          : state.developmentPoints,
-        transitPoints: isOR
-          ? state.transitPoints
-          : state.transitPoints - node.cost.amount,
+        orPoints: state.orPoints - node.cost.amount,
         nodeChoices: action.choices
           ? { ...state.nodeChoices, ...action.choices }
           : state.nodeChoices,
@@ -115,12 +132,12 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
     case 'UPGRADE_SPECIALIZATION': {
       const { zone } = action;
       const current = state.specializationLevels[zone] ?? 0;
-      if (current < 1) return state; // ветка ещё не открыта
+      if (current < 1) return state;
       if (current >= 10) return state;
-      if (state.developmentPoints < 1) return state;
+      if (state.orPoints < TREE_ECONOMY.specUpgradeCost) return state;
       return {
         ...state,
-        developmentPoints: state.developmentPoints - 1,
+        orPoints: state.orPoints - TREE_ECONOMY.specUpgradeCost,
         specializationLevels: {
           ...state.specializationLevels,
           [zone]: current + 1,
@@ -137,12 +154,71 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
     }
 
     case 'GAIN_LEVEL':
-      if (state.level < 1) return state; // сначала выбери расу
+      if (state.level < 1) return state;
       return {
         ...state,
         level: state.level + 1,
-        developmentPoints: state.developmentPoints + 1,
-        transitPoints: state.transitPoints + 1,
+        orPoints: state.orPoints + TREE_ECONOMY.orPerLevel,
+      };
+
+    case 'SET_ARMOR_BONUS':
+      return { ...state, armorBonus: Math.max(0, action.value) };
+
+    case 'TAKE_WOUND': {
+      const n = action.amount ?? 1;
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          wounds: Math.min(state.combat.woundsMax, state.combat.wounds + n),
+        },
+      };
+    }
+
+    case 'HEAL_WOUND': {
+      const n = action.amount ?? 1;
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          wounds: Math.max(0, state.combat.wounds - n),
+        },
+      };
+    }
+
+    case 'ADD_FATIGUE':
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          fatigue: Math.min(
+            state.combat.fatigueMax,
+            state.combat.fatigue + action.amount,
+          ),
+        },
+      };
+
+    case 'CLEAR_FATIGUE': {
+      const n = action.amount ?? state.combat.fatigue;
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          fatigue: Math.max(0, state.combat.fatigue - n),
+        },
+      };
+    }
+
+    case 'REST':
+      return {
+        ...state,
+        combat: { ...state.combat, wounds: 0, fatigue: 0 },
+      };
+
+    case 'SYNC_COMBAT_LIMITS':
+      return {
+        ...state,
+        combat: clampCombat(state.combat, action.combat),
       };
 
     case 'RESET':
@@ -156,10 +232,12 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
 interface SkillTreeContextValue {
   state: SkillTreeState;
   treeData: SkillTreeData;
-  setTreeData: (updater: SkillTreeData | ((prev: SkillTreeData) => SkillTreeData)) => void;
+  setTreeData: (
+    updater: SkillTreeData | ((prev: SkillTreeData) => SkillTreeData),
+  ) => void;
   dispatch: React.Dispatch<Action>;
-  /** Итоговые модификаторы для листа персонажа (read-only агрегат). */
   totalStatModifiers: Record<string, number>;
+  kb: number;
 }
 
 const SkillTreeContext = createContext<SkillTreeContextValue | undefined>(
@@ -168,10 +246,28 @@ const SkillTreeContext = createContext<SkillTreeContextValue | undefined>(
 
 function loadState(): SkillTreeState {
   try {
-    const raw = localStorage.getItem(LS_STATE);
+    const raw =
+      localStorage.getItem(LS_STATE) ??
+      localStorage.getItem('teomor_skill_tree_state_v3');
     if (!raw) return defaultState;
-    const parsed = JSON.parse(raw) as Partial<SkillTreeState>;
-    return { ...defaultState, ...parsed };
+    const parsed = JSON.parse(raw) as Partial<SkillTreeState> & {
+      developmentPoints?: number;
+      transitPoints?: number;
+    };
+    const orPoints =
+      migrateLegacyPoints(parsed) ??
+      (typeof parsed.orPoints === 'number' ? parsed.orPoints : defaultState.orPoints);
+    const level = typeof parsed.level === 'number' ? parsed.level : defaultState.level;
+    const combat = parsed.combat ?? defaultCombatState(level, {});
+    const armorBonus =
+      typeof parsed.armorBonus === 'number' ? parsed.armorBonus : 0;
+    return {
+      ...defaultState,
+      ...parsed,
+      orPoints,
+      combat,
+      armorBonus,
+    };
   } catch {
     return defaultState;
   }
@@ -194,7 +290,6 @@ function computeTotals(
   treeData: SkillTreeData,
 ): Record<string, number> {
   const totals: Record<string, number> = {};
-  // Бонусы расы и предыстории.
   const race = raceById(state.race);
   const bg = backgroundById(state.background);
   for (const src of [race, bg]) {
@@ -203,7 +298,6 @@ function computeTotals(
       totals[stat] = (totals[stat] ?? 0) + val;
     }
   }
-  // Выборы расы вида «+1 к характеристике».
   if (race?.choices) {
     for (const c of race.choices) {
       const chosen = state.raceChoices[c.id];
@@ -226,6 +320,30 @@ export function SkillTreeProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
   const [treeData, setTreeData] = useState<SkillTreeData>(loadTree);
 
+  const totalStatModifiers = useMemo(
+    () => computeTotals(state, treeData),
+    [state, treeData],
+  );
+
+  const kb = useMemo(
+    () => computeKB(totalStatModifiers, state.armorBonus),
+    [totalStatModifiers, state.armorBonus],
+  );
+
+  useEffect(() => {
+    const woundsMax = computeWoundsMax(state.level, totalStatModifiers);
+    const fatigueMax = computeFatigueMax(state.level, totalStatModifiers);
+    if (
+      state.combat.woundsMax !== woundsMax ||
+      state.combat.fatigueMax !== fatigueMax
+    ) {
+      dispatch({
+        type: 'SYNC_COMBAT_LIMITS',
+        combat: { woundsMax, fatigueMax },
+      });
+    }
+  }, [state.level, state.combat.woundsMax, state.combat.fatigueMax, totalStatModifiers]);
+
   useEffect(() => {
     localStorage.setItem(LS_STATE, JSON.stringify(state));
   }, [state]);
@@ -234,11 +352,9 @@ export function SkillTreeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(LS_DATA, JSON.stringify(treeData));
   }, [treeData]);
 
-  const totalStatModifiers = computeTotals(state, treeData);
-
   return (
     <SkillTreeContext.Provider
-      value={{ state, treeData, setTreeData, dispatch, totalStatModifiers }}
+      value={{ state, treeData, setTreeData, dispatch, totalStatModifiers, kb }}
     >
       {children}
     </SkillTreeContext.Provider>
