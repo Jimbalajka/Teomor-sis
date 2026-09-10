@@ -1,6 +1,7 @@
 import { races, raceById } from './races';
 import { backgrounds } from './backgrounds';
 import { useSkillTree } from './SkillTreeContext';
+import { TREE_ECONOMY } from './treeEconomy';
 
 // Создание персонажа: раса -> выборы расы (если есть) -> предыстория.
 export function RaceModal({ onClose }: { onClose: () => void }) {
@@ -23,7 +24,7 @@ export function RaceModal({ onClose }: { onClose: () => void }) {
           <>
             <h2 className="modal-title">Шаг 1 — Раса</h2>
             <p className="modal-sub">
-              Выбери расу. Получишь её особенности, 2 ОУ и 2 ОО (1 уровень).
+              Выбери расу. Получишь её особенности, {TREE_ECONOMY.startOrPoints} ОР и 1 уровень.
             </p>
             <div className="race-grid">
               {races.map((r) => (

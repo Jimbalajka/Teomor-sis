@@ -12,7 +12,7 @@
 `docs/playtest/DAY1-CHECKLIST.md`
 
 ## localStorage
-Ключ `teomor_skill_tree_state_v3`. Старые ОУ+ОО → сумма в ОР.
+Ключ `teomor_skill_tree_state_v4` (этап 2; fallback с v3). Старые ОУ+ОО → сумма в ОР. Раны/усталость — в `state.combat`.
 
 ## День 2
 Узлы Виэт, Кибернетика, карты JSON.

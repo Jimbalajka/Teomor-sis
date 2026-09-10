@@ -65,8 +65,7 @@ export function CustomSkillNode({ data }: NodeProps) {
             )}
             {node.category !== 'root' && (
               <div className="tooltip-cost">
-                Стоимость: {node.cost.amount}{' '}
-                {node.cost.type === 'OR' ? 'ОУ' : 'ОО'}
+                Стоимость: {node.cost.amount} ОР
               </div>
             )}
             {status === 'locked' && reason && (

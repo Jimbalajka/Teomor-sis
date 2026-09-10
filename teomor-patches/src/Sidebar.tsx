@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useSkillTree } from './SkillTreeContext';
 import { raceById } from './races';
 import type { ZoneType } from './types';
 import type { View } from './App';
 import { TREE_ECONOMY } from './treeEconomy';
+import { auraHint } from './coreRules';
 
 const ZONES: { zone: ZoneType; dar: string; branch: string }[] = [
   { zone: 'magic', dar: 'Дар Медведя', branch: 'Магия' },
@@ -19,9 +21,11 @@ interface SidebarProps {
 }
 
 export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) {
-  const { state, dispatch, totalStatModifiers } = useSkillTree();
+  const { state, dispatch, totalStatModifiers, kb } = useSkillTree();
   const totals = Object.entries(totalStatModifiers);
   const race = raceById(state.race);
+  const { combat } = state;
+  const [targetLevel, setTargetLevel] = useState(1);
 
   return (
     <aside className="sidebar">
@@ -80,6 +84,95 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
           + Уровень (+{TREE_ECONOMY.orPerLevel} ОР)
         </button>
       </section>
+
+      {state.level >= 1 && (
+        <section className="panel combat-panel">
+          <h2>Бой (ядро v2)</h2>
+          <div className="combat-row">
+            <span>
+              КБ <b>{kb}</b>
+            </span>
+            <label className="armor-in">
+              Броня +
+              <input
+                type="number"
+                min={0}
+                className="armor-input"
+                value={state.armorBonus}
+                onChange={(e) =>
+                  dispatch({
+                    type: 'SET_ARMOR_BONUS',
+                    value: Number(e.target.value),
+                  })
+                }
+              />
+            </label>
+          </div>
+          <div className="combat-track">
+            <span>
+              Раны {combat.wounds}/{combat.woundsMax}
+            </span>
+            <div className="combat-btns">
+              <button
+                className="btn btn-mini"
+                onClick={() => dispatch({ type: 'TAKE_WOUND' })}
+              >
+                +рана
+              </button>
+              <button
+                className="btn btn-mini"
+                disabled={combat.wounds <= 0}
+                onClick={() => dispatch({ type: 'HEAL_WOUND' })}
+              >
+                −рана
+              </button>
+            </div>
+          </div>
+          <div className="combat-track">
+            <span>
+              Усталость {combat.fatigue}/{combat.fatigueMax}
+            </span>
+            <div className="combat-btns">
+              <button
+                className="btn btn-mini"
+                onClick={() => dispatch({ type: 'ADD_FATIGUE', amount: 1 })}
+              >
+                +1
+              </button>
+              <button
+                className="btn btn-mini"
+                disabled={combat.fatigue <= 0}
+                onClick={() => dispatch({ type: 'CLEAR_FATIGUE', amount: 1 })}
+              >
+                −1
+              </button>
+            </div>
+          </div>
+          <button
+            className="btn btn-mini"
+            onClick={() => dispatch({ type: 'REST' })}
+          >
+            Отдых (сброс ран и усталости)
+          </button>
+          <div className="combat-row aura-row">
+            <label className="armor-in">
+              Ур. цели
+              <input
+                type="number"
+                min={1}
+                className="armor-input"
+                value={targetLevel}
+                onChange={(e) => setTargetLevel(Number(e.target.value))}
+              />
+            </label>
+            <span className="aura-hint">
+              {state.level >= 1
+                ? auraHint(state.level, Math.max(1, targetLevel))
+                : '—'}
+            </span>
+          </div>
+        </section>
+      )}
 
       <section className="panel">
         <h2>Дары (специализации)</h2>

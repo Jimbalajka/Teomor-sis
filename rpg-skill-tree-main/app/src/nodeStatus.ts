@@ -1,9 +1,5 @@
 import type { NodeStatus, SkillNode, SkillTreeState } from './types';
 
-/**
- * Родитель считается выполненным, если хотя бы один из parentIds изучен.
- * `center_start` / root всегда считается доступным родителем.
- */
 function parentsSatisfied(node: SkillNode, state: SkillTreeState): boolean {
   const parents = node.requirements?.parentIds;
   if (!parents || parents.length === 0) return true;
@@ -23,7 +19,6 @@ function minLevelSatisfied(node: SkillNode, state: SkillTreeState): boolean {
   return min == null || state.level >= min;
 }
 
-/** Сколько узлов данной категории уже изучено. */
 function countCategory(
   cat: SkillNode['category'],
   state: SkillTreeState,
@@ -35,14 +30,11 @@ function countCategory(
 }
 
 function canAfford(node: SkillNode, state: SkillTreeState): boolean {
-  const pool =
-    node.cost.type === 'OR' ? state.developmentPoints : state.transitPoints;
-  return pool >= node.cost.amount;
+  return state.orPoints >= node.cost.amount;
 }
 
 type TreeData = { nodes: SkillNode[] };
 
-/** Для слотов Черт/Ремёсел: доступно = floor(level/4); каждый слот занимает счётчик. */
 function slotBlock(
   node: SkillNode,
   state: SkillTreeState,
@@ -60,7 +52,6 @@ function slotBlock(
   return null;
 }
 
-/** Все структурные требования выполнены (без учёта наличия очков). */
 export function requirementsMet(
   node: SkillNode,
   state: SkillTreeState,
@@ -74,7 +65,6 @@ export function requirementsMet(
   );
 }
 
-/** Визуальный статус узла на графе. */
 export function getNodeStatus(
   node: SkillNode,
   state: SkillTreeState,
@@ -86,9 +76,6 @@ export function getNodeStatus(
   return 'locked';
 }
 
-/**
- * Причина, по которой узел нельзя купить прямо сейчас, либо `null` если можно.
- */
 export function blockReason(
   node: SkillNode,
   state: SkillTreeState,
@@ -105,13 +92,10 @@ export function blockReason(
   }
   const slot = slotBlock(node, state, data);
   if (slot) return slot;
-  if (!canAfford(node, state)) {
-    return node.cost.type === 'OR' ? 'Недостаточно ОУ' : 'Недостаточно ОО';
-  }
+  if (!canAfford(node, state)) return 'Недостаточно ОР';
   return null;
 }
 
-/** Секретный узел, который ещё нельзя раскрыть игроку. */
 export function isHiddenSecret(
   node: SkillNode,
   state: SkillTreeState,
@@ -119,6 +103,5 @@ export function isHiddenSecret(
   if (!node.isSecret) return false;
   if (state.allocatedNodes.includes(node.id)) return false;
   if (state.discoveredSecrets.includes(node.id)) return false;
-  // Раскрываем силуэт, как только структурные требования выполнены.
   return !requirementsMet(node, state);
 }
