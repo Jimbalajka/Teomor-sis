@@ -5,10 +5,8 @@ import type { ZoneType } from './types';
 import type { View } from './App';
 import { TREE_ECONOMY } from './treeEconomy';
 import { auraHint } from './coreRules';
-import {
-  applyPlaytestCatalog,
-  PLAYTEST_PRESETS,
-} from './playtestPresets';
+import { applyPlaytestCatalog } from './cardsData';
+import { PLAYTEST_PRESETS } from './playtestPresets';
 
 const ZONES: { zone: ZoneType; dar: string; branch: string }[] = [
   { zone: 'magic', dar: 'Дар Медведя', branch: 'Магия' },

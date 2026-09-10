@@ -1,9 +1,3 @@
-import {
-  initialCards,
-  loadCatalogFromStorage,
-  mergeCatalog,
-  saveCatalogToStorage,
-} from './cardsData';
 import type { ZoneType } from './types';
 
 export interface PlaytestPreset {
@@ -137,11 +131,4 @@ export const PLAYTEST_PRESETS: PlaytestPreset[] = [
 
 export function presetById(id: string): PlaytestPreset | undefined {
   return PLAYTEST_PRESETS.find((p) => p.id === id);
-}
-
-export function applyPlaytestCatalog(cardIds: string[]): void {
-  const current = loadCatalogFromStorage();
-  const ensure = initialCards.filter((c) => cardIds.includes(c.id));
-  saveCatalogToStorage(mergeCatalog([...current, ...ensure]));
-  window.dispatchEvent(new Event('teomor-catalog-updated'));
 }

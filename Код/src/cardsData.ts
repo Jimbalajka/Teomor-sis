@@ -327,3 +327,11 @@ export function resetCatalogToDefault(): GameCard[] {
   saveCatalogToStorage(merged);
   return merged;
 }
+
+/** Подмешать карты пресета плейтеста в localStorage. */
+export function applyPlaytestCatalog(cardIds: string[]): void {
+  const current = loadCatalogFromStorage();
+  const ensure = initialCards.filter((c) => cardIds.includes(c.id));
+  saveCatalogToStorage(mergeCatalog([...current, ...ensure]));
+  window.dispatchEvent(new Event('teomor-catalog-updated'));
+}
