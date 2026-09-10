@@ -11,6 +11,7 @@ import type { SkillNode, SkillTreeData, SkillTreeState, ZoneType } from './types
 import type { PlaytestPreset } from './playtestPresets';
 import { migrateLegacyPoints } from './types';
 import { initialSkillTree } from './skillTreeData';
+import { TREE_BUILD } from './buildInfo';
 import { blockReason } from './nodeStatus';
 import { raceById } from './races';
 import { backgroundById } from './backgrounds';
@@ -24,8 +25,8 @@ import {
 } from './coreRules';
 
 const LS_STATE = 'teomor_skill_tree_state_v4';
-const LS_DATA = 'teomor_skill_tree_data_v7';
-const TREE_BUILD = '20260328-all-branches';
+const LS_DATA = 'teomor_skill_tree_data_v8';
+
 
 const defaultState: SkillTreeState = {
   level: 0,
