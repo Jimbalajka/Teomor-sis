@@ -2156,3 +2156,77 @@ body {
   font-size: 0.75rem;
   margin-top: 0.15rem;
 }
+
+
+/* PoE highways: toolbar, tiers, route highlight */
+.tree-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+}
+.tree-toolbar button {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.tree-toolbar button:hover:not(:disabled) {
+  border-color: #64748b;
+}
+.tree-toolbar button.active {
+  background: #1e3a5f;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+.tree-toolbar button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.node-tier-small {
+  width: 58px;
+  height: 58px;
+}
+.node-tier-medium {
+  width: 76px;
+  height: 76px;
+}
+.node-tier-large {
+  width: 94px;
+  height: 94px;
+}
+.node-tier-large.node-keystone {
+  border-radius: 4px;
+  clip-path: polygon(50% 0%, 92% 25%, 92% 75%, 50% 100%, 8% 75%, 8% 25%);
+}
+.node-dimmed {
+  opacity: 0.2 !important;
+  filter: grayscale(0.55);
+  pointer-events: none;
+}
+.node-route {
+  box-shadow:
+    0 0 0 3px rgba(250, 204, 21, 0.9),
+    0 0 20px rgba(250, 204, 21, 0.45);
+  z-index: 15;
+}
+.react-flow__edge.edge-route path {
+  stroke: #facc15 !important;
+  stroke-width: 3.5 !important;
+  filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.55));
+}
+.react-flow__edge.edge-dimmed path {
+  opacity: 0.12;
+}

@@ -2,7 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
-  useMemo,
+  useCallback,
   useReducer,
   useState,
   type ReactNode,
@@ -15,6 +15,7 @@ import { blockReason } from './nodeStatus';
 import { raceById } from './races';
 import { backgroundById } from './backgrounds';
 import { TREE_ECONOMY } from './treeEconomy';
+import { buildRouteNodeSet, type TreeFocus } from './treeView';
 import {
   computeFatigueMax,
   computeKB,
@@ -24,7 +25,7 @@ import {
 } from './coreRules';
 
 const LS_STATE = 'teomor_skill_tree_state_v4';
-const LS_DATA = 'teomor_skill_tree_data_v12';
+const LS_DATA = 'teomor_skill_tree_data_v13';
 
 
 const defaultState: SkillTreeState = {
@@ -292,6 +293,12 @@ interface SkillTreeContextValue {
   dispatch: React.Dispatch<Action>;
   totalStatModifiers: Record<string, number>;
   kb: number;
+  treeFocus: TreeFocus;
+  setTreeFocus: (focus: TreeFocus) => void;
+  showRouteHighlight: boolean;
+  setShowRouteHighlight: (show: boolean) => void;
+  routeHighlight: Set<string>;
+  highlightRoute: (allocatedIds: string[]) => void;
 }
 
 const SkillTreeContext = createContext<SkillTreeContextValue | undefined>(
@@ -410,6 +417,16 @@ function computeTotals(
 export function SkillTreeProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
   const [treeData, setTreeData] = useState<SkillTreeData>(loadTree);
+  const [treeFocus, setTreeFocus] = useState<TreeFocus>('all');
+  const [showRouteHighlight, setShowRouteHighlight] = useState(false);
+  const [routeHighlight, setRouteHighlight] = useState<Set<string>>(() => new Set());
+
+  const highlightRoute = useCallback(
+    (allocatedIds: string[]) => {
+      setRouteHighlight(buildRouteNodeSet(allocatedIds, treeData));
+    },
+    [treeData],
+  );
 
   const totalStatModifiers = useMemo(
     () => computeTotals(state, treeData),
@@ -445,7 +462,20 @@ export function SkillTreeProvider({ children }: { children: ReactNode }) {
 
   return (
     <SkillTreeContext.Provider
-      value={{ state, treeData, setTreeData, dispatch, totalStatModifiers, kb }}
+      value={{
+        state,
+        treeData,
+        setTreeData,
+        dispatch,
+        totalStatModifiers,
+        kb,
+        treeFocus,
+        setTreeFocus,
+        showRouteHighlight,
+        setShowRouteHighlight,
+        routeHighlight,
+        highlightRoute,
+      }}
     >
       {children}
     </SkillTreeContext.Provider>

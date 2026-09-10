@@ -43,7 +43,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) {
-  const { state, dispatch, totalStatModifiers, kb } = useSkillTree();
+  const { state, dispatch, totalStatModifiers, kb, highlightRoute, setShowRouteHighlight } = useSkillTree();
   const totals = Object.entries(totalStatModifiers);
   const race = raceById(state.race);
   const { combat } = state;
@@ -84,6 +84,8 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
             onClick={() => {
               applyPlaytestCatalog(p.cardIds);
               dispatch({ type: 'LOAD_PLAYTEST_PRESET', preset: p });
+              highlightRoute(p.allocatedNodes);
+              setShowRouteHighlight(true);
             }}
           >
             {p.label}
