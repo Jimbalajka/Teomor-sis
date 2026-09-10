@@ -9,10 +9,12 @@ const ZONE_ANGLE: Record<Exclude<ZoneType, 'center'>, number> = {
   wisdom: 135 * DEG,
 };
 
-const R_SPEC = 380;
-const R_SCHOOL = 620;
-const R_CENTER = 160;
-const RING_STEP = 155;
+const R_SPEC = 460;
+const R_SCHOOL = 760;
+const R_CENTER = 175;
+
+const R_FEAT_LANE = 1180;
+const R_CRAFT_LANE = 1180;
 
 function polar(r: number, angle: number) {
   return { x: Math.round(Math.cos(angle) * r), y: Math.round(Math.sin(angle) * r) };
@@ -42,23 +44,6 @@ function topoOrder(nodes: SkillNode[]): SkillNode[] {
   return ordered;
 }
 
-function findAnchor(node: SkillNode, byId: Map<string, SkillNode>): { anchorId: string; depth: number; zone: ZoneType } {
-  let cur: SkillNode | undefined = node;
-  let depth = 0;
-  const seen = new Set<string>();
-  while (cur && !seen.has(cur.id)) {
-    seen.add(cur.id);
-    if (cur.category === 'subcategory') return { anchorId: cur.id, depth, zone: cur.zone };
-    if (cur.category === 'specialization') return { anchorId: cur.id, depth, zone: cur.zone };
-    if (cur.category === 'root') return { anchorId: cur.id, depth, zone: cur.zone };
-    const pid = cur.requirements?.parentIds?.[0];
-    if (!pid) break;
-    depth++;
-    cur = byId.get(pid);
-  }
-  return { anchorId: 'center_start', depth: depth + 1, zone: node.zone };
-}
-
 function centerAngleFor(node: SkillNode, index: number, total: number): number {
   const fixed: Record<string, number> = {
     g_will: -158 * DEG,
@@ -77,10 +62,9 @@ function centerAngleFor(node: SkillNode, index: number, total: number): number {
   return -180 * DEG + (index / Math.max(total, 1)) * 360 * DEG;
 }
 
-
-function relaxLayout(source: SkillNode[], minDist = 94, iterations = 10): SkillNode[] {
+function relaxLayout(source: SkillNode[], minDist = 96, iterations = 8): SkillNode[] {
   const out = source.map((n) => ({ ...n }));
-  const locked = new Set<SkillNode['category']>(['root', 'specialization', 'subcategory']);
+  const locked = new Set<SkillNode['category']>(['root', 'specialization', 'subcategory', 'feat_slot', 'craft_slot']);
   for (let iter = 0; iter < iterations; iter++) {
     for (let i = 0; i < out.length; i++) {
       for (let j = i + 1; j < out.length; j++) {
@@ -105,27 +89,43 @@ function relaxLayout(source: SkillNode[], minDist = 94, iterations = 10): SkillN
   return out;
 }
 
+/** PoE-подобная раскладка: 4 сектора, полосы черт/ремёсел, веера суб-классов. */
 export function applyPoeLayout(source: SkillNode[]): SkillNode[] {
   const nodes = source.map((n) => ({ ...n }));
-  const byId = new Map(nodes.map((n) => [n.id, n]));
   const pos = new Map<string, { x: number; y: number }>();
-  const anchorAngle = new Map<string, number>();
+  const angleOf = new Map<string, number>();
   pos.set('center_start', { x: 0, y: 0 });
-  anchorAngle.set('center_start', -90 * DEG);
+  angleOf.set('center_start', -90 * DEG);
 
-  const centerOthers = nodes.filter((n) => n.zone === 'center' && n.category !== 'root');
+  const centerOthers = nodes.filter((n) => n.zone === 'center' && n.category !== 'root' && n.category !== 'feat_slot' && n.category !== 'craft_slot');
   centerOthers.forEach((n, i) => {
     const a = centerAngleFor(n, i, centerOthers.length);
-    const r = n.id.startsWith('g_path') ? R_CENTER + 70 : R_CENTER;
+    const r = n.id.startsWith('g_path') ? R_CENTER + 85 : R_CENTER;
     pos.set(n.id, polar(r, a));
-    anchorAngle.set(n.id, a);
+    angleOf.set(n.id, a);
+  });
+
+  const featSlots = nodes.filter((n) => n.category === 'feat_slot').sort((a, b) => a.id.localeCompare(b.id));
+  featSlots.forEach((n, i) => {
+    const a = 180 * DEG;
+    const r = R_FEAT_LANE + i * 40;
+    pos.set(n.id, polar(r, a));
+    angleOf.set(n.id, a);
+  });
+
+  const craftSlots = nodes.filter((n) => n.category === 'craft_slot').sort((a, b) => a.id.localeCompare(b.id));
+  craftSlots.forEach((n, i) => {
+    const a = 0;
+    const r = R_CRAFT_LANE + i * 40;
+    pos.set(n.id, polar(r, a));
+    angleOf.set(n.id, a);
   });
 
   for (const n of nodes.filter((n) => n.category === 'specialization')) {
     const zone = n.zone as Exclude<ZoneType, 'center'>;
     const a = ZONE_ANGLE[zone];
     pos.set(n.id, polar(R_SPEC, a));
-    anchorAngle.set(n.id, a);
+    angleOf.set(n.id, a);
   }
 
   for (const zone of ['magic', 'strength', 'dexterity', 'wisdom'] as const) {
@@ -133,12 +133,40 @@ export function applyPoeLayout(source: SkillNode[]): SkillNode[] {
       .filter((n) => n.zone === zone && n.category === 'subcategory')
       .sort((a, b) => a.id.localeCompare(b.id));
     const base = ZONE_ANGLE[zone];
-    const spread = Math.min(34 * DEG, (76 * DEG) / Math.max(schools.length, 1));
+    const spread = Math.min(36 * DEG, (78 * DEG) / Math.max(schools.length, 1));
     schools.forEach((s, i) => {
       const a = base + (i - (schools.length - 1) / 2) * spread;
       pos.set(s.id, polar(R_SCHOOL, a));
-      anchorAngle.set(s.id, a);
+      angleOf.set(s.id, a);
     });
+  }
+
+  const profByGroup = new Map<string, SkillNode[]>();
+  for (const n of nodes) {
+    if (n.exclusiveGroup?.startsWith('prof_')) {
+      const g = n.exclusiveGroup;
+      if (!profByGroup.has(g)) profByGroup.set(g, []);
+      profByGroup.get(g)!.push(n);
+    }
+  }
+  for (const list of profByGroup.values()) list.sort((a, b) => a.id.localeCompare(b.id));
+
+  for (const [group, profs] of profByGroup) {
+    const schoolId = group.replace('prof_', '');
+    const schoolAngle = angleOf.get(schoolId) ?? ZONE_ANGLE[profs[0].zone as Exclude<ZoneType, 'center'>];
+    const fan = Math.min(42 * DEG, profs.length * 9 * DEG);
+    profs.forEach((p, i) => {
+      const a = schoolAngle + (i - (profs.length - 1) / 2) * (fan / Math.max(profs.length - 1, 1));
+      pos.set(p.id, polar(R_SCHOOL + 200, a));
+      angleOf.set(p.id, a);
+    });
+  }
+
+  for (const n of nodes.filter((n) => n.id.startsWith('bridge_'))) {
+    const schoolId = n.requirements?.requiredSchool ?? n.requirements?.parentIds?.[0];
+    const a = angleOf.get(schoolId ?? '') ?? ZONE_ANGLE[n.zone as Exclude<ZoneType, 'center'>];
+    pos.set(n.id, polar(R_SCHOOL + 120, a));
+    angleOf.set(n.id, a);
   }
 
   const childrenOf = new Map<string, SkillNode[]>();
@@ -150,37 +178,24 @@ export function applyPoeLayout(source: SkillNode[]): SkillNode[] {
   }
   for (const kids of childrenOf.values()) kids.sort((a, b) => a.id.localeCompare(b.id));
 
-  const depthBucket = new Map<string, Map<number, SkillNode[]>>();
-  for (const n of nodes) {
-    if (pos.has(n.id)) continue;
-    const { anchorId, depth } = findAnchor(n, byId);
-    if (!depthBucket.has(anchorId)) depthBucket.set(anchorId, new Map());
-    const dm = depthBucket.get(anchorId)!;
-    if (!dm.has(depth)) dm.set(depth, []);
-    dm.get(depth)!.push(n);
-  }
-
   for (const n of topoOrder(nodes)) {
     if (pos.has(n.id)) continue;
     const parentId = n.requirements?.parentIds?.[0];
-    if (!parentId) continue;
+    if (!parentId || !pos.has(parentId)) continue;
 
-    const { anchorId, depth } = findAnchor(n, byId);
-    const baseA = anchorAngle.get(anchorId) ?? Math.atan2(pos.get(anchorId)?.y ?? 0, pos.get(anchorId)?.x ?? 1);
-    const bucket = depthBucket.get(anchorId)?.get(depth) ?? [n];
-    const idx = bucket.findIndex((b) => b.id === n.id);
-    const count = bucket.length;
-    const arcSpan = Math.min(150 * DEG, Math.max(22 * DEG, count * 7.5 * DEG));
+    const parentAngle = angleOf.get(parentId) ?? Math.atan2(pos.get(parentId)!.y, pos.get(parentId)!.x);
+    const pr = Math.hypot(pos.get(parentId)!.x, pos.get(parentId)!.y) || 1;
+    const siblings = childrenOf.get(parentId) ?? [n];
+    const idx = siblings.findIndex((s) => s.id === n.id);
+    const count = siblings.length;
+    const arcSpan = Math.min(48 * DEG, Math.max(14 * DEG, count * 6 * DEG));
     const aOff = count <= 1 ? 0 : (idx - (count - 1) / 2) * (arcSpan / (count - 1));
-
-    let r = R_CENTER;
-    const anchorNode = byId.get(anchorId);
-    if (anchorNode?.category === 'specialization') r = R_SPEC + depth * RING_STEP;
-    else if (anchorNode?.category === 'subcategory') r = R_SCHOOL + depth * RING_STEP;
-    else if (anchorNode?.category === 'root') r = R_CENTER + depth * RING_STEP;
-    else r = (Math.hypot(pos.get(anchorId)?.x ?? 0, pos.get(anchorId)?.y ?? 0) || R_CENTER) + depth * RING_STEP;
-
-    pos.set(n.id, polar(r, baseA + aOff));
+    const childAngle = parentAngle + aOff;
+    const step = n.category === 'feat' ? 145 : n.id.startsWith('road_') ? 135 : 125;
+    const nr = pr + step + Math.floor(idx / 5) * 35;
+    const p = polar(nr, childAngle);
+    pos.set(n.id, p);
+    angleOf.set(n.id, childAngle);
   }
 
   const placed = nodes.map((n) => {

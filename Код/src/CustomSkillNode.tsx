@@ -33,6 +33,7 @@ export function CustomSkillNode({ data }: NodeProps) {
         (node.category === 'transit_general' ||
           node.category === 'transit_specialized') &&
           'node-transit',
+        node.id.startsWith('bridge_') && 'node-bridge',
         hidden && 'node-secret',
       )}
     >
