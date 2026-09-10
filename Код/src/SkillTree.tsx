@@ -153,6 +153,14 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
   );
 
   return (
+    <div className="tree-canvas-wrap">
+      <div className="tree-zone-bg" aria-hidden />
+      <div className="tree-zone-legend">
+        <span className="legend-magic">◆ Медведь · Разум</span>
+        <span className="legend-strength">◆ Зюбания · Сила</span>
+        <span className="legend-dexterity">◆ Змей · Ловкость</span>
+        <span className="legend-wisdom">◆ Голубь · Мудрость</span>
+      </div>
     <div className={editMode ? 'rf-wrap rf-edit' : 'rf-wrap'}>
       <ReactFlow
         nodes={nodes}
@@ -191,6 +199,7 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
       {choiceNode && (
         <ChoiceModal node={choiceNode} onClose={() => setChoiceNode(null)} />
       )}
+    </div>
     </div>
   );
 }
