@@ -34,6 +34,24 @@ function canAfford(node: SkillNode, state: SkillTreeState): boolean {
 
 type TreeData = { nodes: SkillNode[] };
 
+
+function exclusiveBlock(
+  node: SkillNode,
+  state: SkillTreeState,
+  data?: TreeData,
+): string | null {
+  const group = node.exclusiveGroup;
+  if (!group || !data) return null;
+  const takenId = state.allocatedNodes.find((id) => {
+    if (id === node.id) return false;
+    const other = data.nodes.find((n) => n.id === id);
+    return other?.exclusiveGroup === group;
+  });
+  if (!takenId) return null;
+  const taken = data.nodes.find((n) => n.id === takenId);
+  return `⚔ Выбор: уже взято «${taken?.label ?? takenId}». Другие варианты недоступны.`;
+}
+
 function slotBlock(
   node: SkillNode,
   state: SkillTreeState,
@@ -60,7 +78,8 @@ export function requirementsMet(
     parentsSatisfied(node, state) &&
     specializationSatisfied(node, state) &&
     minLevelSatisfied(node, state) &&
-    slotBlock(node, state, data) === null
+    slotBlock(node, state, data) === null &&
+    exclusiveBlock(node, state, data) === null
   );
 }
 
@@ -94,6 +113,8 @@ export function blockReason(
   }
   const slot = slotBlock(node, state, data);
   if (slot) return slot;
+  const excl = exclusiveBlock(node, state, data);
+  if (excl) return excl;
   if (!canAfford(node, state)) return 'Недостаточно ОР';
   return null;
 }

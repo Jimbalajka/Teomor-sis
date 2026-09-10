@@ -51,6 +51,8 @@ export interface SkillNode {
   choices?: NodeChoice[];
   statModifiers?: Record<string, number>;
   description?: string;
+  /** Только один узел из группы может быть изучен (развилка билда). */
+  exclusiveGroup?: string;
 }
 
 export interface NodeChoiceOption {
