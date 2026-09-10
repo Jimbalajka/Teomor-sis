@@ -1,23 +1,34 @@
-# Установка (Windows)
+# Локальный запуск (VS Code)
 
-## Способ 1 — ZIP (надёжнее всего)
+## Какая папка — корень проекта
 
-1. Скачай: https://github.com/Jimbalajka/Teomor-sis/archive/refs/heads/feat/kod-full-export.zip
-2. Распакуй
-3. Открой папку `Teomor-sis-feat-kod-full-export/Код/` — **это корень проекта**
-4. В терминале:
+Открывай в VS Code **именно папку `Код/`** (там `package.json` с `"name": "teomor-skill-tree"`).
+
+| Папка | Запускать? |
+|-------|------------|
+| `Teomor-sis/Код/` | ✅ ДА |
+| `teomor-patches/day1-bundle/app/` | ❌ зеркало, не для dev |
+| `teomor-patches/src/` | ❌ копия без vite |
+| `rpg-skill-tree-main/app/` | ❌ старый бандл |
+
+## После копирования новых файлов
+
+1. **Останови** терминал (`Ctrl+C`) где был `npm run dev`
+2. Запусти снова из **`Код/`**:
    ```
    npm install
    npm run dev
    ```
+3. Открой **http://localhost:5173/?reset=1** (сбросит кэш браузера)
+4. В шапке слева должно быть: **Теомор v2.2** (зелёный тег)
 
-**Не копируй в старый my-skill-tree** — открой `Код` как отдельный проект.
+Если v2.2 нет — VS Code открыт не из `Код/` или dev-сервер не перезапущен.
+
+## Кнопка «Обновить кэш»
+
+Внизу сайдбара — сбрасывает localStorage и перезагружает страницу.
 
 ## Проверка файлов
 
-В `src/` должно быть **28 файлов**.  
-`playtestPresets.ts` = **2826 байт** (если 0 — файл битый).
-
-## PR
-
-https://github.com/Jimbalajka/Teomor-sis/compare/main...feat/kod-full-export
+В `src/Sidebar.tsx` должны быть строки: `sidebar-inner`, `APP_VERSION`.
+В `src/skillTreeData.ts` — ~520+ строк, узел `g_hub`.
