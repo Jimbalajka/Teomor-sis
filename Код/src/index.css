@@ -42,7 +42,8 @@ body {
   flex: 1;
   position: relative;
   min-height: 0;
-  overflow-y: auto;
+  min-width: 0;
+  overflow: hidden;
   background:
     radial-gradient(circle at 50% 45%, #10151f 0%, #070a0f 70%);
 }
@@ -280,13 +281,36 @@ body {
 .sidebar {
   width: 300px;
   min-width: 300px;
+  min-height: 0;
+  height: 100%;
+  flex-shrink: 0;
   background: var(--panel);
   border-right: 1px solid var(--border);
-  padding: 16px;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+.sidebar-footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+.sidebar-footer .btn {
+  flex: 1;
 }
 .sidebar-title {
   font-size: 18px;
@@ -1075,6 +1099,7 @@ body {
     width: 100%;
     min-width: 0;
     max-height: 42vh;
+    height: auto;
     border-right: none;
     border-bottom: 1px solid var(--border);
   }

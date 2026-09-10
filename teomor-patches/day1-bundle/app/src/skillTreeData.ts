@@ -62,14 +62,14 @@ const fork = (
 const nodes: SkillNode[] = [
   // ── Центр + общие навыки ─────────────────────────────────
   { id: 'center_start', x: 0, y: 0, label: 'Центр', zone: 'center', category: 'root', cost: { type: 'OR', amount: 0 }, description: 'Исток персонажа (1 уровень после выбора расы). От него — 4 Дара и общие навыки.' },
-  { id: 'g_will', x: 0, y: -190, label: 'Воля', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Интуиция: 1 }, description: 'Общий. +1 к спасброскам воли/Интуиции.' },
+  { id: 'g_will', x: -95, y: -175, label: 'Воля', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Интуиция: 1 }, description: 'Общий. +1 к спасброскам воли/Интуиции.' },
   { id: 'g_grit', x: 190, y: 0, label: 'Закалка', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Ранения: 1 }, description: 'Общий. +1 к макс. ранам.' },
   { id: 'g_swift', x: 0, y: 190, label: 'Проворство', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Шаг: 1 }, description: 'Общий. +1 к Шагу.' },
   { id: 'g_lore', x: -190, y: 0, label: 'Эрудиция', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { 'Поиск Информации': 1 }, description: 'Общий. +1 к Поиску информации.' },
-  { id: 'g_hub', x: 0, y: -110, label: 'Фундамент', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, description: 'Общая ветка. Универсальные бонусы для любого билда.' },
+  { id: 'g_hub', x: 0, y: -95, label: 'Фундамент', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, description: 'Общая ветка. Универсальные бонусы для любого билда.' },
   { id: 'g_path_body', x: 130, y: -150, label: 'Путь Тела', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'general_path', requirements: { parentIds: ['g_hub'] }, statModifiers: { Ранения: 1, Атлетика: 1 }, description: '⚔ Выбор пути. Выносливость и атлетика. Альтернатива: Разум, Мастер.' },
   { id: 'g_path_mind', x: -130, y: -150, label: 'Путь Разума', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'general_path', requirements: { parentIds: ['g_hub'] }, statModifiers: { 'Поиск Информации': 1, Проницательность: 1 }, description: '⚔ Выбор пути. Эрудиция (как у волшебника D&D). Альтернатива: Тело, Мастер.' },
-  { id: 'g_path_master', x: 0, y: -200, label: 'Путь Мастера', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'general_path', requirements: { parentIds: ['g_hub'] }, statModifiers: { Ремесло: 1, Шаг: 1 }, description: '⚔ Выбор пути. Универсальное ремесло и мобильность (PoE: travel nodes).' },
+  { id: 'g_path_master', x: 0, y: -280, label: 'Путь Мастера', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'general_path', requirements: { parentIds: ['g_hub'] }, statModifiers: { Ремесло: 1, Шаг: 1 }, description: '⚔ Выбор пути. Универсальное ремесло и мобильность (PoE: travel nodes).' },
   { id: 'g_resolve', x: 130, y: 130, label: 'Решимость', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Стержень: 1 }, description: 'Общий. +1 Стержень — спасброски воли.' },
   { id: 'g_alert', x: -130, y: 130, label: 'Бдительность', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Внимание: 1 }, description: 'Общий. +1 Внимание — инициатива и поиск.' },
   { id: 'g_second_wind', x: 0, y: 220, label: 'Второе дыхание', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['g_grit', 'g_swift'] }, description: 'Общий (2 родителя). Раз/отдых сними 2 усталости без магии.' },
@@ -318,8 +318,8 @@ function addRoadFork(
   let prev = parent;
   steps.forEach((st, i) => {
     const id = `road_${parent}_${i}`;
-    const x = Math.round(sx + ux * (200 + i * 150));
-    const y = Math.round(sy + uy * (200 + i * 150));
+    const x = Math.round(sx + ux * (380 + i * 220));
+    const y = Math.round(sy + uy * (380 + i * 220));
     const reqLevel = st.t === 's' ? 2 : st.t === 'n' ? 4 : 6;
     nodes.push({
       id, x, y, label: st.label, zone,
@@ -333,8 +333,8 @@ function addRoadFork(
   });
   forks.forEach((f, fi) => {
     const id = `road_${parent}_fork_${f.idSuffix}`;
-    const x = Math.round(sx + ux * (200 + steps.length * 150 + fi * 90));
-    const y = Math.round(sy + uy * (200 + steps.length * 150 + fi * 90));
+    const x = Math.round(sx + ux * (380 + steps.length * 220 + fi * 130));
+    const y = Math.round(sy + uy * (380 + steps.length * 220 + fi * 130));
     nodes.push({
       id, x, y, label: f.label, zone, category: 'feat',
       cost: { type: 'OR', amount: 2 },
@@ -353,8 +353,8 @@ function addRoad(
   let prev = parent;
   steps.forEach((st, i) => {
     const id = `road_${parent}_${i}`;
-    const x = Math.round(sx + ux * (200 + i * 150));
-    const y = Math.round(sy + uy * (200 + i * 150));
+    const x = Math.round(sx + ux * (380 + i * 220));
+    const y = Math.round(sy + uy * (380 + i * 220));
     const reqLevel = st.t === 's' ? 2 : st.t === 'n' ? 4 : 6;
     nodes.push({
       id, x, y, label: st.label, zone,
@@ -515,13 +515,57 @@ addRoadFork('sch_leader', -280, 560, 'wisdom', [
   { idSuffix: 'face', label: 'Лик лидера', group: 'leader_keystone', desc: 'D&D Inspiring Leader. После отдыха союзники +1 рана temp.' },
 ]);
 
+
+const LAYOUT_SCALE = 1.55;
+
+function scaleLayout(source: SkillNode[]): SkillNode[] {
+  return source.map((n) => ({
+    ...n,
+    x: Math.round(n.x * LAYOUT_SCALE),
+    y: Math.round(n.y * LAYOUT_SCALE),
+  }));
+}
+
+/** Раздвигает узлы, не трогая центр и специализации (Дары). */
+function relaxOverlaps(source: SkillNode[], minDist = 92, iterations = 12): SkillNode[] {
+  const out = source.map((n) => ({ ...n }));
+  const locked = new Set<SkillNode['category']>(['root', 'specialization']);
+  for (let iter = 0; iter < iterations; iter++) {
+    for (let i = 0; i < out.length; i++) {
+      for (let j = i + 1; j < out.length; j++) {
+        const dx = out[j].x - out[i].x;
+        const dy = out[j].y - out[i].y;
+        const d = Math.hypot(dx, dy) || 1;
+        if (d >= minDist) continue;
+        const push = (minDist - d) / 2 + 3;
+        const ux = dx / d;
+        const uy = dy / d;
+        if (!locked.has(out[i].category)) {
+          out[i].x -= Math.round(ux * push);
+          out[i].y -= Math.round(uy * push);
+        }
+        if (!locked.has(out[j].category)) {
+          out[j].x += Math.round(ux * push);
+          out[j].y += Math.round(uy * push);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+function layoutNodes(source: SkillNode[]): SkillNode[] {
+  return relaxOverlaps(scaleLayout(source));
+}
+
 // Рёбра выводим автоматически из parentIds
 const edges: SkillEdge[] = [];
-for (const n of nodes) {
+const laidOutNodes = layoutNodes(nodes);
+for (const n of laidOutNodes) {
   const parents = n.requirements?.parentIds ?? [];
   for (const p of parents) edges.push({ from: p, to: n.id });
 }
 // Специализации крепим к центру явно (у них parentIds = center_start уже задан выше,
 // цикл их учтёт). Секрет/черты цепочки тоже учтены через parentIds.
 
-export const initialSkillTree: SkillTreeData = { nodes, edges };
+export const initialSkillTree: SkillTreeData = { nodes: laidOutNodes, edges };

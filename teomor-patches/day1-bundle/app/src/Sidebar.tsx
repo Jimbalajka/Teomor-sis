@@ -7,8 +7,6 @@ import { TREE_ECONOMY } from './treeEconomy';
 import { auraHint } from './coreRules';
 import { applyPlaytestCatalog } from './cardsData';
 import { PLAYTEST_PRESETS } from './playtestPresets';
-import { APP_VERSION } from './buildInfo';
-import { clearTeomorLocalCache } from './teomorCache';
 
 const ZONES: { zone: ZoneType; dar: string; branch: string }[] = [
   { zone: 'magic', dar: 'Дар Медведя', branch: 'Магия' },
@@ -53,8 +51,8 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-inner">
-      <h1 className="sidebar-title">Теомор <span className="build-tag">{`v${APP_VERSION}`}</span></h1>
+      <div className="sidebar-scroll">
+      <h1 className="sidebar-title">Теомор</h1>
 
       <div className="view-tabs">
         {(
@@ -239,14 +237,6 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
       <div className="sidebar-footer">
         <button className={`btn ${editMode ? 'btn-primary' : ''}`} onClick={onToggleEdit}>
           {editMode ? '✓ Редактор' : '✎ Редактор'}
-        </button>
-        <button className="btn" type="button" onClick={() => {
-          if (confirm('Сбросить кэш браузера (древо + персонаж)? Страница перезагрузится.')) {
-            clearTeomorLocalCache();
-            window.location.reload();
-          }
-        }}>
-          Обновить кэш
         </button>
         <button className="btn btn-danger" onClick={() => { if (confirm('Сбросить?')) dispatch({ type: 'RESET' }); }}>
           Сбросить
