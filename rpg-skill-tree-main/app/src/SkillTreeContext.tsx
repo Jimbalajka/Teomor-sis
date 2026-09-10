@@ -61,7 +61,8 @@ type Action =
   | { type: 'CLEAR_FATIGUE'; amount?: number }
   | { type: 'REST' }
   | { type: 'SYNC_COMBAT_LIMITS'; combat: Pick<CombatState, 'woundsMax' | 'fatigueMax'> }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  | { type: 'LOAD_PLAYTEST_PRESET'; preset: import('./playtestPresets').PlaytestPreset };
 
 function clampCombat(
   combat: CombatState,
@@ -220,6 +221,26 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
         ...state,
         combat: clampCombat(state.combat, action.combat),
       };
+
+    case 'LOAD_PLAYTEST_PRESET': {
+      const p = action.preset;
+      const specLevels = {
+        ...defaultState.specializationLevels,
+        ...p.specializationLevels,
+      };
+      return {
+        ...defaultState,
+        level: p.level,
+        race: p.race,
+        background: null,
+        allocatedNodes: p.allocatedNodes,
+        specializationLevels: specLevels,
+        orPoints: p.orPoints,
+        combat: defaultCombatState(p.level, {}),
+        nodeChoices: {},
+        raceChoices: {},
+      };
+    }
 
     case 'RESET':
       return defaultState;

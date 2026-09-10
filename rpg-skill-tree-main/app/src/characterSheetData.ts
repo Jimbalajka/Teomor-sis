@@ -123,22 +123,3 @@ export function skillValue(
   const raw = rawSkillValue(modifiers, name);
   return Math.max(0, Math.min(cap, raw));
 }
-
-/** Сырой бонус навыка из древа / расы / предыстории. */
-export function rawSkillValue(
-  modifiers: Record<string, number>,
-  name: string,
-): number {
-  return BASE_CHAR + (modifiers[name] ?? 0);
-}
-
-/** Итог навыка 0–15 с учётом потолка уровня. */
-export function skillValue(
-  modifiers: Record<string, number>,
-  name: string,
-  level: number,
-): number {
-  const cap = charCapForLevel(level);
-  const raw = rawSkillValue(modifiers, name);
-  return Math.max(0, Math.min(cap, raw));
-}

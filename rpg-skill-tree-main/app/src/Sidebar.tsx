@@ -5,6 +5,10 @@ import type { ZoneType } from './types';
 import type { View } from './App';
 import { TREE_ECONOMY } from './treeEconomy';
 import { auraHint } from './coreRules';
+import {
+  applyPlaytestCatalog,
+  PLAYTEST_PRESETS,
+} from './playtestPresets';
 
 const ZONES: { zone: ZoneType; dar: string; branch: string }[] = [
   { zone: 'magic', dar: 'Дар Медведя', branch: 'Магия' },
@@ -50,7 +54,30 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
         >
           Карты
         </button>
+        <button
+          className={`btn ${view === 'constructor' ? 'btn-primary' : ''}`}
+          onClick={() => onView('constructor')}
+        >
+          Конструктор
+        </button>
       </div>
+
+      <section className="panel playtest-panel">
+        <h2>Плейтест</h2>
+        <p className="muted">Загрузить билд + карты из ABILITY-MAP</p>
+        {PLAYTEST_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            className="btn btn-mini playtest-btn"
+            onClick={() => {
+              applyPlaytestCatalog(p.cardIds);
+              dispatch({ type: 'LOAD_PLAYTEST_PRESET', preset: p });
+            }}
+          >
+            {p.label}
+          </button>
+        ))}
+      </section>
 
       <section className="panel">
         <h2>Персонаж</h2>

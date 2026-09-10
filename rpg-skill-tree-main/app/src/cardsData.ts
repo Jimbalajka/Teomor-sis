@@ -276,3 +276,47 @@ export const initialCards: GameCard[] = [
     description: 'Инструмент. Ближний и дальний режим без смены оружия.',
   },
 ];
+
+export const LS_CARDS_KEY = 'teomor_cards_v2';
+export const LS_CARDS_LEGACY = 'teomor_cards_v1';
+
+/** Справочник = initialCards + сохранённые; новые карты плейтеста не теряются. */
+export function mergeCatalog(stored: GameCard[]): GameCard[] {
+  const byId = new Map<string, GameCard>();
+  for (const c of initialCards) byId.set(c.id, { ...c });
+  for (const c of stored) {
+    const base = byId.get(c.id);
+    byId.set(c.id, base ? { ...base, ...c } : c);
+  }
+  return Array.from(byId.values());
+}
+
+export function loadCatalogFromStorage(): GameCard[] {
+  try {
+    const raw =
+      localStorage.getItem(LS_CARDS_KEY) ??
+      localStorage.getItem(LS_CARDS_LEGACY);
+    if (!raw) return [...initialCards];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [...initialCards];
+    const normalized = parsed.map((c: GameCard & { osLimit?: number }) => ({
+      ...c,
+      fatigueMax: c.fatigueMax ?? c.osLimit,
+    }));
+    return mergeCatalog(normalized);
+  } catch {
+    return [...initialCards];
+  }
+}
+
+export function saveCatalogToStorage(cards: GameCard[]): void {
+  localStorage.setItem(LS_CARDS_KEY, JSON.stringify(mergeCatalog(cards)));
+}
+
+/** Сброс каталога: все initialCards + приёмы игрока. */
+export function resetCatalogToDefault(): GameCard[] {
+  const builds = loadCatalogFromStorage().filter((c) => c.category === 'build');
+  const merged = mergeCatalog([...initialCards, ...builds]);
+  saveCatalogToStorage(merged);
+  return merged;
+}
