@@ -11,7 +11,6 @@ import type { SkillNode, SkillTreeData, SkillTreeState, ZoneType } from './types
 import type { PlaytestPreset } from './playtestPresets';
 import { migrateLegacyPoints } from './types';
 import { initialSkillTree } from './skillTreeData';
-import { TREE_BUILD } from './buildInfo';
 import { blockReason } from './nodeStatus';
 import { raceById } from './races';
 import { backgroundById } from './backgrounds';
@@ -25,7 +24,7 @@ import {
 } from './coreRules';
 
 const LS_STATE = 'teomor_skill_tree_state_v4';
-const LS_DATA = 'teomor_skill_tree_data_v8';
+const LS_DATA = 'teomor_skill_tree_data_v9';
 
 
 const defaultState: SkillTreeState = {
@@ -341,16 +340,8 @@ function loadState(): SkillTreeState {
 
 function loadTree(): SkillTreeData {
   try {
-    // Сброс устаревшего древа из localStorage после обновления билда
-    for (const legacy of ['teomor_skill_tree_data_v6', 'teomor_skill_tree_data_v5', 'teomor_skill_tree_data_v4']) {
-      localStorage.removeItem(legacy);
-    }
-    const build = localStorage.getItem('teomor_tree_build');
     const raw = localStorage.getItem(LS_DATA);
-    if (!raw || build !== TREE_BUILD) {
-      localStorage.setItem('teomor_tree_build', TREE_BUILD);
-      return initialSkillTree;
-    }
+    if (!raw) return initialSkillTree;
     const parsed = JSON.parse(raw) as SkillTreeData;
     if (parsed?.nodes && parsed?.edges) {
       return {
