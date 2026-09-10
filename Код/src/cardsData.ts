@@ -207,6 +207,13 @@ export const initialCards: GameCard[] = [
     description: 'Приём. Электричество. Игнор металлической брони.',
   },
   {
+    id: 'sig_counterspell',
+    category: 'sigil',
+    name: 'Контрмагия',
+    cost: 2,
+    description: 'Приём. Реакция: гасит чужой приём/фокус на Сложности каста.',
+  },
+  {
     id: 'sig_healing',
     category: 'sigil',
     name: 'Усиленное исцеление',

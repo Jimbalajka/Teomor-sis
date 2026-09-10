@@ -56,3 +56,14 @@ npm run preview  # локальный просмотр сборки
 описаны в `types.ts` (`SkillNode`).
 
 Геймдизайн системы: `../docs/game-design.md`.
+
+## ⚠ Windows / частичное копирование
+
+**Замени весь `src/` целиком**, не отдельные файлы. Иначе:
+- `EditorPanel`: ошибка `CostType | "transit"`
+- нет вкладки «Конструктор» и блока «Плейтест»
+- `Sidebar` / `characterSheetData` — «is not a module»
+
+Файлы после фикса Windows:
+- `BuildCardPanel.tsx` (был `CardConstructor.tsx`)
+- `cardBuilderLogic.ts` (был `cardConstructor.ts`)

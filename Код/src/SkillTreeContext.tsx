@@ -299,7 +299,15 @@ function loadTree(): SkillTreeData {
     const raw = localStorage.getItem(LS_DATA);
     if (!raw) return initialSkillTree;
     const parsed = JSON.parse(raw) as SkillTreeData;
-    if (parsed?.nodes && parsed?.edges) return parsed;
+    if (parsed?.nodes && parsed?.edges) {
+      return {
+        ...parsed,
+        nodes: parsed.nodes.map((n) => ({
+          ...n,
+          cost: { type: 'OR' as const, amount: n.cost?.amount ?? 1 },
+        })),
+      };
+    }
     return initialSkillTree;
   } catch {
     return initialSkillTree;
