@@ -25,6 +25,12 @@ export type NodeStatus = 'locked' | 'available' | 'unlocked';
 /** Валюта прокачки узла — одна: ОР (Очко Развития). */
 export type CostType = 'OR';
 
+/** Старые сохранения: transit / development → ОР. */
+export function normalizeCostType(type: unknown): CostType {
+  if (type === 'OR' || type === 'transit' || type === 'development') return 'OR';
+  return 'OR';
+}
+
 export interface SkillNode {
   id: string;
   x: number;
