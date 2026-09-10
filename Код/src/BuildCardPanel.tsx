@@ -11,7 +11,7 @@ import {
   resolveRecipe,
   withinKvelLimit,
   type BuildParts,
-} from './cardConstructor';
+} from './cardBuilderLogic';
 
 const emptyParts = (): BuildParts => ({
   sigilIds: [],

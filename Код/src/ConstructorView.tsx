@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CardConstructor } from './CardConstructor';
+import { CardConstructor } from './BuildCardPanel';
 import { CardPreview } from './CardPreview';
 import {
   loadCatalogFromStorage,

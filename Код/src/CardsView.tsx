@@ -8,7 +8,7 @@ import {
   type GameCard,
 } from './cardsData';
 import { CardPreview } from './CardPreview';
-import { CardConstructor } from './CardConstructor';
+import { CardConstructor } from './BuildCardPanel';
 import { RulesPanel } from './RulesPanel';
 import { useSkillTree } from './SkillTreeContext';
 import type { ZoneType } from './types';
