@@ -21,9 +21,11 @@ export function CardPreview({
   const costLabel =
     card.category === 'kvel'
       ? `Макс ${card.fatigueMax ?? 0}`
-      : card.cost === 0
-        ? '—'
-        : `${card.cost} уст.`;
+      : card.category === 'build'
+        ? `${card.cost} уст.`
+        : card.cost === 0
+          ? '—'
+          : `${card.cost} уст.`;
 
   return (
     <div
@@ -41,6 +43,9 @@ export function CardPreview({
       )}
       {params.length > 0 && <div className="card-params">{params.join('  ·  ')}</div>}
 
+      {card.mechanicalNote && (
+        <div className="card-mech muted">{card.mechanicalNote}</div>
+      )}
       <div className="card-body">{card.description}</div>
       {card.profession && <div className="card-prof">{card.profession}</div>}
     </div>

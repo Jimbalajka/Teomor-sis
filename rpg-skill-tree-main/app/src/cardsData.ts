@@ -2,13 +2,19 @@
 // Формат = данные; вид рисуется из шаблона (CardPreview). Редактируется в приложении
 // (вкладка «Карты») и хранится в localStorage.
 
-export type CardCategory = 'kvel' | 'aspect' | 'sigil' | 'instrument';
+export type CardCategory =
+  | 'kvel'
+  | 'aspect'
+  | 'sigil'
+  | 'instrument'
+  | 'build';
 
 export const CATEGORY_LABEL: Record<CardCategory, string> = {
   kvel: 'Квель',
   aspect: 'Аспект',
   sigil: 'Сигил',
   instrument: 'Инструмент',
+  build: 'Приём',
 };
 
 export interface GameCard {
@@ -25,6 +31,13 @@ export interface GameCard {
   states?: string; // «Ослепление»
   profession?: string;
   description: string;
+  buildParts?: {
+    kvelId?: string;
+    aspectId?: string;
+    sigilIds: string[];
+    instrumentId?: string;
+  };
+  mechanicalNote?: string;
 }
 
 export const initialCards: GameCard[] = [

@@ -1076,3 +1076,165 @@ body {
     flex: 1;
   }
 }
+
+/* ── Конструктор карт ── */
+.cards-mode {
+  display: flex;
+  gap: 6px;
+  margin-right: 12px;
+}
+.card-constructor {
+  margin-bottom: 16px;
+}
+.ctor-hint {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+}
+.ctor-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .ctor-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.ctor-part-block h4 {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+}
+.ctor-part-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ctor-part-btn {
+  font-size: 0.75rem;
+}
+.ctor-part-cost {
+  opacity: 0.7;
+}
+.ctor-form label {
+  display: block;
+  margin-bottom: 8px;
+}
+.ctor-form input,
+.ctor-form textarea {
+  width: 100%;
+  margin-top: 4px;
+}
+.ctor-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+  font-size: 0.9rem;
+}
+.ctor-warn {
+  color: #c44;
+}
+.ctor-mech {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.ctor-preview {
+  margin: 12px 0;
+  max-width: 280px;
+}
+.ctor-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.card-tile.cat-build {
+  border-color: #6a5acd;
+}
+.card-mech {
+  font-size: 0.75rem;
+  padding: 0 8px 4px;
+}
+
+/* ── Конструктор карт ── */
+.cards-mode {
+  display: flex;
+  gap: 6px;
+  margin-right: 12px;
+}
+.card-constructor {
+  margin-bottom: 16px;
+}
+.ctor-hint {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+}
+.ctor-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .ctor-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.ctor-part-block h4 {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+}
+.ctor-part-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ctor-part-btn {
+  font-size: 0.75rem;
+}
+.ctor-part-cost {
+  opacity: 0.7;
+}
+.ctor-form label {
+  display: block;
+  margin-bottom: 8px;
+}
+.ctor-form input,
+.ctor-form textarea {
+  width: 100%;
+  margin-top: 4px;
+}
+.ctor-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+  font-size: 0.9rem;
+}
+.ctor-warn {
+  color: #c44;
+}
+.ctor-mech {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.ctor-preview {
+  margin: 12px 0;
+  max-width: 280px;
+}
+.ctor-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.card-tile.cat-build {
+  border-color: #6a5acd;
+}
+.card-mech {
+  font-size: 0.75rem;
+  padding: 0 8px 4px;
+}
