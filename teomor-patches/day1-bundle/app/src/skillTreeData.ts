@@ -31,16 +31,32 @@ const ASPECTS_ELEMENTAL = ['Огонь', 'Вода', 'Земля', 'Воздух
 const ASPECTS_MYSTIC = ['Психический', 'Силовой', 'Иной'].map((a) => opt(a));
 const ASPECTS_DIVINE = ['Лучистый', 'Некротический', 'Природный'].map((a) => opt(a));
 
+const CHOICE = '⚔ Выбор: нельзя взять другой вариант этой развилки. ';
+
 const prof = (
   id: string, x: number, y: number, label: string, zone: SkillNode['zone'],
   parent: string, desc: string, aspects = ASPECTS_ELEMENTAL,
 ): SkillNode => ({
   id, x, y, label, zone, category: 'transit_specialized', cost: { type: 'OR', amount: 1 },
-  requirements: { parentIds: [parent], requiredSpecialization: { zone, level: 3 } }, description: desc,
+  exclusiveGroup: `prof_${parent}`,
+  requirements: { parentIds: [parent], requiredSpecialization: { zone, level: 3 } },
+  description: `${CHOICE}Суб-класс (один на школу). ${desc}`,
   choices: [
     { id: 'aspect', title: 'Выбери аспект', pick: 1, options: aspects },
     { id: 'sigils', title: 'Выбери 2 сигила', pick: 2, options: SIGIL_OPTIONS },
   ],
+});
+
+const fork = (
+  id: string, x: number, y: number, label: string, zone: SkillNode['zone'],
+  parent: string, group: string, desc: string, cost = 2,
+  mods?: Record<string, number>,
+): SkillNode => ({
+  id, x, y, label, zone, category: 'feat', cost: { type: 'OR', amount: cost },
+  exclusiveGroup: group,
+  requirements: { parentIds: [parent], requiredSpecialization: { zone, level: 4 } },
+  statModifiers: mods,
+  description: `${CHOICE}${desc}`,
 });
 
 const nodes: SkillNode[] = [
@@ -50,6 +66,14 @@ const nodes: SkillNode[] = [
   { id: 'g_grit', x: 190, y: 0, label: 'Закалка', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Ранения: 1 }, description: 'Общий. +1 к макс. ранам.' },
   { id: 'g_swift', x: 0, y: 190, label: 'Проворство', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Шаг: 1 }, description: 'Общий. +1 к Шагу.' },
   { id: 'g_lore', x: -190, y: 0, label: 'Эрудиция', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { 'Поиск Информации': 1 }, description: 'Общий. +1 к Поиску информации.' },
+  { id: 'g_hub', x: 0, y: -110, label: 'Фундамент', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, description: 'Общая ветка. Универсальные бонусы для любого билда.' },
+  { id: 'g_path_body', x: 130, y: -150, label: 'Путь Тела', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'general_path', requirements: { parentIds: ['g_hub'] }, statModifiers: { Ранения: 1, Атлетика: 1 }, description: '⚔ Выбор пути. Выносливость и атлетика. Альтернатива: Разум, Мастер.' },
+  { id: 'g_path_mind', x: -130, y: -150, label: 'Путь Разума', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'general_path', requirements: { parentIds: ['g_hub'] }, statModifiers: { 'Поиск Информации': 1, Проницательность: 1 }, description: '⚔ Выбор пути. Эрудиция (как у волшебника D&D). Альтернатива: Тело, Мастер.' },
+  { id: 'g_path_master', x: 0, y: -200, label: 'Путь Мастера', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'general_path', requirements: { parentIds: ['g_hub'] }, statModifiers: { Ремесло: 1, Шаг: 1 }, description: '⚔ Выбор пути. Универсальное ремесло и мобильность (PoE: travel nodes).' },
+  { id: 'g_resolve', x: 130, y: 130, label: 'Решимость', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Стержень: 1 }, description: 'Общий. +1 Стержень — спасброски воли.' },
+  { id: 'g_alert', x: -130, y: 130, label: 'Бдительность', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] }, statModifiers: { Внимание: 1 }, description: 'Общий. +1 Внимание — инициатива и поиск.' },
+  { id: 'g_second_wind', x: 0, y: 220, label: 'Второе дыхание', zone: 'center', category: 'transit_general', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['g_grit', 'g_swift'] }, description: 'Общий (2 родителя). Раз/отдых сними 2 усталости без магии.' },
+
 
   // ════════ ДАР МЕДВЕДЯ — МАГИЯ / РАЗУМ (синий) ════════════
   { id: 'spec_magic', x: -340, y: -340, label: 'Дар Медведя', zone: 'magic', category: 'specialization', cost: { type: 'OR', amount: 2 }, level: 0, maxLevel: 10, requirements: { parentIds: ['center_start'] }, description: 'Магия (Разум). Открывает Квель и школы. До 10 за ОР.' },
@@ -57,6 +81,7 @@ const nodes: SkillNode[] = [
   // Волшебство + суб-типы
   { ...school('sch_wizardry', -520, -300, 'Волшебство', 'magic', 'Академическая магия (Разум). База маг-профессий.'), requirements: { parentIds: ['spec_magic'], requiredSpecialization: { zone: 'magic', level: 1 } } },
   { id: 'ts_concentration', x: -500, y: -180, label: 'Концентрация', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_wizardry'], requiredSpecialization: { zone: 'magic', level: 2 } }, statModifiers: { Усталость: 1 }, description: '+1 к макс. усталости.' },
+  { id: 'feat_arcane_recovery', x: -540, y: -120, label: 'Восстановление маны', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_concentration'], requiredSpecialization: { zone: 'magic', level: 3 } }, description: 'D&D Arcane Recovery. Короткий отдых: сбрось 2 усталости (1×/день).' },
   { id: 'feat_spellpower', x: -620, y: -140, label: 'Сила заклинаний', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_concentration'], requiredSpecialization: { zone: 'magic', level: 3 } }, description: 'Черта. Раз за бой игнорируй ограничение геометрии каскада.' },
   { id: 'secret_truename', x: -740, y: -180, label: 'Истинное Имя', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 2 }, isSecret: true, secretHint: 'Требуется 5 ур. Дара Медведя и Концентрация.', requirements: { parentIds: ['ts_concentration'], requiredSpecialization: { zone: 'magic', level: 5 } }, statModifiers: { Усталость: 2 }, description: 'Секрет. Раз за бой игнорируй откат приёма (+1 усталости).' },
   prof('st_necromancer', -700, -320, 'Некромант', 'magic', 'sch_wizardry', 'Суб-тип Волшебства: смерть, нежить, истощение.'),
@@ -68,6 +93,7 @@ const nodes: SkillNode[] = [
   // Мистика
   { ...school('sch_mysticism', -360, -520, 'Мистика', 'magic', 'Тонкие энергии, прорицание (Разум).'), requirements: { parentIds: ['spec_magic'], requiredSpecialization: { zone: 'magic', level: 1 } } },
   { id: 'ts_divination', x: -460, y: -620, label: 'Прорицание', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_mysticism'], requiredSpecialization: { zone: 'magic', level: 2 } }, statModifiers: { Мистика: 1 }, description: '+1 к Мистике. Чтение потоков Махтерии.' },
+  { id: 'feat_portent', x: -520, y: -680, label: 'Предзнаменование', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_divination'], requiredSpecialization: { zone: 'magic', level: 3 } }, description: 'D&D Portent. 2×/день подмени d20 союзника или врага на заготовленное значение.' },
   prof('st_mystic', -300, -640, 'Мистик', 'magic', 'sch_mysticism', 'Суб-тип: психический/силовой урон в обход брони.', ASPECTS_MYSTIC),
 
   // Волшебный ремесленник
@@ -77,21 +103,34 @@ const nodes: SkillNode[] = [
   prof('st_artificer', -600, -680, 'Артефактор', 'magic', 'sch_craft', 'Суб-тип: создание артефактов и механо-магии.'),
 
   // ── Волшебство: плюсы/минусы ──
-  { id: 'ts_warding', x: -420, y: -240, label: 'Обереги', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_wizardry'], requiredSpecialization: { zone: 'magic', level: 2 } }, statModifiers: { КБ: 1 }, description: 'Плюс: +1 КБ от барьеров. Минус: −1 к дальности Сигилов.' },
-  { id: 'ts_overchannel', x: -580, y: -200, label: 'Перегрузка', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_concentration'], requiredSpecialization: { zone: 'magic', level: 3 } }, statModifiers: { Волшебство: 1, Усталость: 1 }, description: 'Плюс: +1 Волшебство, Sигилы +1 кость. Минус: +1 усталость за мощный каст.' },
-  { id: 'feat_evoker', x: -660, y: -260, label: 'Пламя и гром', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_overchannel'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Элементальные Sигилы без подготовки; прочие школы +1 усталость.' },
-  { id: 'feat_necrotic', x: -820, y: -280, label: 'Касание смерти', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['st_necromancer'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Некромант: касание = 1 рана; лечишь половину нанесённого.' },
-  { id: 'feat_blood_price', x: -760, y: -460, label: 'Цена крови', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['st_bloodmage'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Кровавый маг: трать раны вместо усталости (1 рана = 2 усталости каста).' },
+  { id: 'ts_warding', x: -420, y: -240, label: 'Обереги', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'wiz_style', requirements: { parentIds: ['sch_wizardry'], requiredSpecialization: { zone: 'magic', level: 2 } }, statModifiers: { КБ: 1 }, description: '⚔ Выбор стиля (D&D: Школа Огражения). +1 КБ; −1 дальность Сигилов.' },
+  { id: 'ts_overchannel', x: -580, y: -200, label: 'Перегрузка', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'wiz_style', requirements: { parentIds: ['ts_concentration'], requiredSpecialization: { zone: 'magic', level: 3 } }, statModifiers: { Волшебство: 1, Усталость: 1 }, description: '⚔ Выбор стиля (D&D: Школа Воплощения). +1 Волшебство; +1 усталость за мощный каст.' },
+  fork('feat_evoker', -660, -260, 'Пламя и гром', 'magic', 'ts_overchannel', 'fork_wiz_school', 'D&D Evoker. Элементальные Sигилы без подготовки.', 2),
+  fork('feat_abjurer', -500, -280, 'Магический страж', 'magic', 'ts_warding', 'fork_wiz_school', 'D&D Abjurer Ward. Раз/бой поглощай 1 рану щитом (+2 усталости).', 2),
+  fork('feat_necrotic', -820, -280, 'Касание смерти', 'magic', 'st_necromancer', 'fork_necro', 'Некромант: касание = 1 рана; лечишь половину нанесённого.', 1),
+  fork('feat_grim_harvest', -900, -320, 'Жатва могил', 'magic', 'st_necromancer', 'fork_necro', 'D&D Grim Harvest. Убил существо заклинанием — +1 усталость или сними 1 рану.', 2),
+  fork('feat_blood_price', -760, -460, 'Цена крови', 'magic', 'st_bloodmage', 'fork_blood', 'Трать раны вместо усталости (1 рана = 2 усталости каста).', 2),
+  fork('feat_crimson_ward', -840, -420, 'Багряный щит', 'magic', 'st_bloodmage', 'fork_blood', 'Кровь → барьер: +2 КБ на 1 раунд, ценой 1 раны.', 1),
+  fork('feat_time_dilation', -680, -500, 'Замедление', 'magic', 'st_chronomancer', 'fork_chrono', 'D&D Slow. Зона 3×3: цели −1 Шаг (спасбросок).', 2),
+  fork('feat_haste_self', -580, -520, 'Ускорение', 'magic', 'st_chronomancer', 'fork_chrono', 'D&D Haste. На себя: +1 быстрая атака/раунд; после — усталость 2.', 2),
+  fork('feat_phantasm', -560, -480, 'Фантомная боль', 'magic', 'st_illusionist', 'fork_illus', 'D&D Phantasmal Killer. Иллюзия = 1 рана при провале воли.', 2),
+  fork('feat_invis_weave', -480, -500, 'Плетение тени', 'magic', 'st_illusionist', 'fork_illus', 'D&D Greater Invisibility. Невидим до атаки; первый Sигил −1 усталость.', 1),
+  fork('feat_stone_aegis', -880, -400, 'Каменная кожа', 'magic', 'st_geomancer', 'fork_geo', 'D&D Stoneskin. +1 броня; −1 Шаг.', 1),
+  fork('feat_fissure', -920, -340, 'Разлом', 'magic', 'st_geomancer', 'fork_geo', 'Линия 4 клетки: урон + препятствие (1 раунд).', 2),
 
   // ── Мистика: контроль vs урон ──
   { id: 'ts_mindshield', x: -400, y: -680, label: 'Щит разума', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_divination'], requiredSpecialization: { zone: 'magic', level: 3 } }, statModifiers: { Стержень: 1 }, description: 'Плюс: спасброски vs контроля. Минус: псионический урон −1 кость.' },
-  { id: 'feat_psychic_lance', x: -320, y: -760, label: 'Пси-копьё', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['st_mystic'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Дальняя атака разумом, игнор брони; после — +1 усталость.' },
+  fork('feat_psychic_lance', -320, -760, 'Пси-копьё', 'magic', 'st_mystic', 'fork_mystic', 'Дальняя атака разумом, игнор брони; после — +1 усталость.', 2),
+  fork('feat_telekinetic', -380, -820, 'Телекинез', 'magic', 'st_mystic', 'fork_mystic', 'D&D Mage Hand+. Толкни цель на 2 клетки; усталость 1.', 1),
   { id: 'ts_void_glimpse', x: -500, y: -720, label: 'Взгляд в пустоту', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_mysticism'], requiredSpecialization: { zone: 'magic', level: 3 } }, description: 'Плюс: видишь невидимое 1 раунд. Минус: −1 КБ до конца хода после.' },
 
   // ── Ремесленник: предметы vs скорость ──
   { id: 'ts_infusion', x: -640, y: -620, label: 'Влив силы', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_craft'], requiredSpecialization: { zone: 'magic', level: 2 } }, statModifiers: { Ремесло: 1 }, description: 'Заряжай предметы заранее; импровизация +1 усталость.' },
-  { id: 'feat_battle_alchemy', x: -780, y: -600, label: 'Боевой настой', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['st_alchemist'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Зелье = быстрая атака; без заготовки — помеха на бросок.' },
-  { id: 'feat_rune_weapon', x: -680, y: -700, label: 'Рунное оружие', zone: 'magic', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['st_enchanter'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Вложи Сигил в оружие (1/отдых); без зарядки — обычный удар.' },
+  fork('feat_battle_alchemy', -780, -600, 'Боевой настой', 'magic', 'st_alchemist', 'fork_alch', 'Зелье = быстрая атака; без заготовки — помеха.', 1),
+  fork('feat_elixir_master', -860, -640, 'Мастер эликсиров', 'magic', 'st_alchemist', 'fork_alch', 'D&D Transmutation. Зелья лечат 2 раны; боевые −1 кость.', 2),
+  fork('feat_rune_weapon', -680, -700, 'Рунное оружие', 'magic', 'st_enchanter', 'fork_ench', 'Вложи Сигил в оружие (1/отдых).', 2),
+  fork('feat_artifice_core', -760, -740, 'Ядро артефакта', 'magic', 'st_artificer', 'fork_artifice', 'PoE: item power. Артефакт +1 ранг; без него каст +2 усталость.', 2),
+  fork('feat_gunsmith', -620, -760, 'Мех-маг', 'magic', 'st_artificer', 'fork_artifice', 'Огнестрел + Сигил в одном выстреле (1/бой).', 1),
 
   // ── Синтез школ (2+ родителя) ──
   { id: 'ts_arcane_bridge', x: -440, y: -400, label: 'Синтез школ', zone: 'magic', category: 'transit_specialized', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_concentration', 'ts_divination'], requiredSpecialization: { zone: 'magic', level: 4 } }, description: 'Волшебство + Мистика. 1×/бой контрмагия без усталости после прорицания.' },
@@ -107,23 +146,30 @@ const nodes: SkillNode[] = [
   { id: 'spec_strength', x: 340, y: -340, label: 'Дар Зюбания', zone: 'strength', category: 'specialization', cost: { type: 'OR', amount: 2 }, level: 0, maxLevel: 10, requirements: { parentIds: ['center_start'] }, description: 'Ближний бой. Боевые Формы (Квель воина). До 10 за ОР.' },
   { ...school('sch_berserk', 520, -300, 'Берсерк', 'strength', 'Форма Ярости: урон ценой защиты.'), requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'strength', level: 1 } } },
   { id: 'ts_rage', x: 680, y: -260, label: 'Ярость', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_berserk'], requiredSpecialization: { zone: 'strength', level: 2 } }, statModifiers: { 'Ближний бой (Мощь)': 1 }, description: '+1 к урону ближнего боя; -1 КБ в стойке.' },
+  fork('feat_reckless', 780, -220, 'Безрассудство', 'strength', 'ts_rage', 'fork_berserk', 'PoE: Glass Cannon. +1 кость урона б.боя; −1 КБ.', 1),
+  fork('feat_controlled_fury', 760, -320, 'Контроль ярости', 'strength', 'ts_rage', 'fork_berserk', 'D&D: Controlled rage. Ярость без штрафа КБ; урон без бонуса.', 1),
   { ...school('sch_awaken', 560, -440, 'Высвобождение', 'strength', 'Форма Пробуждения: усталость сбрасывается быстрее в бою.'), requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'strength', level: 2 } } },
-  { id: 'feat_awaken', x: 720, y: -460, label: 'Пробуждение', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['sch_awaken'], requiredSpecialization: { zone: 'strength', level: 4 } }, description: 'Черта. В начале хода сними 1 усталость (разгон).' },
+  fork('feat_awaken_flow', 720, -460, 'Поток', 'strength', 'sch_awaken', 'fork_awaken', 'В начале хода сними 1 усталость (разгон).', 2),
+  fork('feat_awaken_burst', 820, -500, 'Всплеск', 'strength', 'sch_awaken', 'fork_awaken', 'Раз/бой: +1 быстрая атака; после — +2 усталости.', 2),
   { ...school('sch_smith', 420, -520, 'Кузнечное дело', 'strength', 'Рунщик: руны = холодные сигилы, зачарование оружия.'), requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'strength', level: 1 } } },
   { id: 'ts_runeforge', x: 520, y: -640, label: 'Рунная ковка', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_smith'], requiredSpecialization: { zone: 'strength', level: 2 } }, statModifiers: { Ремесло: 1 }, description: 'Наноси руну (холодный сигил) на снаряжение.' },
+  fork('feat_rune_blade', 620, -680, 'Клинок рун', 'strength', 'ts_runeforge', 'fork_smith', 'Руна на оружии: +1 рана при попадании (1/бой).', 2),
+  fork('feat_rune_mail', 480, -720, 'Рунный доспех', 'strength', 'ts_runeforge', 'fork_smith', 'Руна на броне: +1 броня; −1 Шаг.', 1),
   { ...school('sch_toughness', 300, -560, 'Стойкость', 'strength', 'Живучесть: порог ран, кости здоровья.'), requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'strength', level: 1 } } },
-  { id: 'ts_toughskin', x: 340, y: -700, label: 'Толстая кожа', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_toughness'], requiredSpecialization: { zone: 'strength', level: 2 } }, statModifiers: { Ранения: 2 }, description: '+2 к макс. ранам.' },
+  { id: 'ts_toughskin', x: 340, y: -700, label: 'Толстая кожа', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'tough_style', requirements: { parentIds: ['sch_toughness'], requiredSpecialization: { zone: 'strength', level: 2 } }, statModifiers: { Ранения: 2 }, description: '⚔ Выбор. +2 макс. ранам (PoE: life nodes).' },
+  { id: 'ts_iron_will', x: 260, y: -760, label: 'Железная воля', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'tough_style', requirements: { parentIds: ['sch_toughness'], requiredSpecialization: { zone: 'strength', level: 2 } }, statModifiers: { Стержень: 1, Ранения: 1 }, description: '⚔ Выбор. +1 Стержень и +1 рана; меньше сырого HP.' },
   { id: 'ts_multihit', x: 200, y: -640, label: 'Второе дыхание', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['sch_toughness'], requiredSpecialization: { zone: 'strength', level: 4 } }, description: '+1 к максимуму Ран (вторая кость здоровья).' },
   { id: 'feat_battlemage', x: 0, y: -520, label: 'Боевой маг', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'magic', level: 2 } }, description: 'Черта. Требует Дар Зюбания + 2 ур. Дара Медведя. Аспект на оружие/пули.' },
+  { id: 'feat_iron_blood', x: 400, y: -780, label: 'Железная кровь', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_toughskin', 'ts_rage'], requiredSpecialization: { zone: 'strength', level: 5 } }, description: 'Стойкость + Берсерк. Раз/бой игнорируй 1 рану от физ. урона.' },
 
   // ════════ ВИЭТ — боевое искусство (Дар Зюбания) ═══════════
   { ...school('sch_viet', 180, -420, 'Виэт', 'strength', 'Боевое искусство: стойки, натиск, контроль дистанции.'), requirements: { parentIds: ['spec_strength'], requiredSpecialization: { zone: 'strength', level: 1 } } },
-  { id: 'ts_viet_stance_def', x: 80, y: -520, label: 'Стойка Змеи', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_viet'], requiredSpecialization: { zone: 'strength', level: 2 } }, description: 'Оборона: +1 КБ; парирование с преимуществом.' },
-  { id: 'ts_viet_stance_assault', x: 200, y: -560, label: 'Стойка Натиска', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_viet'], requiredSpecialization: { zone: 'strength', level: 2 } }, description: 'Атака: быстрая атака с преимуществом после рывка.' },
+  { id: 'ts_viet_stance_def', x: 80, y: -520, label: 'Стойка Змеи', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'viet_stance', requirements: { parentIds: ['sch_viet'], requiredSpecialization: { zone: 'strength', level: 2 } }, description: '⚔ Выбор стойки. Оборона: +1 КБ; парирование с преимуществом.' },
+  { id: 'ts_viet_stance_assault', x: 200, y: -560, label: 'Стойка Натиска', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'viet_stance', requirements: { parentIds: ['sch_viet'], requiredSpecialization: { zone: 'strength', level: 2 } }, description: '⚔ Выбор стойки. Атака: быстрая атака с преимуществом после рывка.' },
   { id: 'feat_viet_thunder', x: 300, y: -480, label: 'Громовой клинок', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_viet'], requiredSpecialization: { zone: 'strength', level: 2 } }, description: 'Фокус: зарядить клинок. Быстрая атака +1 рана по металлическим целям.' },
   { id: 'feat_viet_charge', x: 280, y: -620, label: 'Натиск', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_viet_stance_assault'], requiredSpecialization: { zone: 'strength', level: 3 } }, description: 'Приём (карта). Рывок + удар, усталость 2.' },
   { id: 'ts_viet_wounding', x: 100, y: -640, label: 'Ранящий стиль', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_viet_stance_def'], requiredSpecialization: { zone: 'strength', level: 3 } }, description: 'Успешная быстрая атака — кровотечение (1 рана в начале хода цели, 1 раунд).' },
-  { id: 'ts_viet_stance_trick', x: 160, y: -480, label: 'Обманная стойка', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_viet'], requiredSpecialization: { zone: 'strength', level: 2 } }, description: 'Третья стойка: враги атакуют с помехой; «гадости» дуэлянта сильнее.' },
+  { id: 'ts_viet_stance_trick', x: 160, y: -480, label: 'Обманная стойка', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, exclusiveGroup: 'viet_stance', requirements: { parentIds: ['sch_viet'], requiredSpecialization: { zone: 'strength', level: 2 } }, description: '⚔ Выбор стойки. Враги атакуют с помехой; дуэльные трюки сильнее.' },
   { id: 'feat_viet_disarm', x: 240, y: -520, label: 'Обезоруживание', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_viet_stance_trick'], requiredSpecialization: { zone: 'strength', level: 3 } }, description: 'Действие: выбить оружие после успешной атаки с преимуществом в Обманной стойке.' },
   { id: 'feat_viet_rook', x: 60, y: -600, label: 'Рокировка', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_viet_stance_def'], requiredSpecialization: { zone: 'strength', level: 4 } }, description: 'Реакция: обмен местами с союзником в соседней клетке — атака перенаправлена.' },
   { id: 'feat_viet_hare', x: 200, y: -700, label: 'Зайчик', zone: 'strength', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_viet_stance_trick'], requiredSpecialization: { zone: 'strength', level: 4 } }, description: 'Фокус: отражённый луч / вспышка — цель слепа на 1 раунд (спасбросок).' },
@@ -224,6 +270,44 @@ const nodes: SkillNode[] = [
 // ── «Дороги» PoE-стиля: цепочки малых узлов -> ноутейбл -> кейстоун ──
 // Генерим из школ наружу от центра. Малый = +мод; ноутейбл/кейстоун = черта.
 type RoadStep = { t: 's' | 'n' | 'k'; label: string; mods?: Record<string, number>; desc?: string };
+
+function addRoadFork(
+  parent: string, sx: number, sy: number, zone: SkillNode['zone'],
+  steps: RoadStep[],
+  forks: { idSuffix: string; label: string; desc: string; group: string }[],
+) {
+  const len = Math.hypot(sx, sy) || 1;
+  const ux = sx / len, uy = sy / len;
+  let prev = parent;
+  steps.forEach((st, i) => {
+    const id = `road_${parent}_${i}`;
+    const x = Math.round(sx + ux * (200 + i * 150));
+    const y = Math.round(sy + uy * (200 + i * 150));
+    const reqLevel = st.t === 's' ? 2 : st.t === 'n' ? 4 : 6;
+    nodes.push({
+      id, x, y, label: st.label, zone,
+      category: st.t === 's' ? 'transit_specialized' : 'feat',
+      cost: { type: 'OR', amount: 1 },
+      requirements: zone === 'center' ? { parentIds: [prev], minLevel: reqLevel + 2 } : { parentIds: [prev], requiredSpecialization: { zone, level: reqLevel } },
+      statModifiers: st.mods,
+      description: (st.t === 'n' ? 'Ноутейбл. ' : '') + (st.desc ?? ''),
+    });
+    prev = id;
+  });
+  forks.forEach((f, fi) => {
+    const id = `road_${parent}_fork_${f.idSuffix}`;
+    const x = Math.round(sx + ux * (200 + steps.length * 150 + fi * 90));
+    const y = Math.round(sy + uy * (200 + steps.length * 150 + fi * 90));
+    nodes.push({
+      id, x, y, label: f.label, zone, category: 'feat',
+      cost: { type: 'OR', amount: 2 },
+      exclusiveGroup: f.group,
+      requirements: zone === 'center' ? { parentIds: [prev], minLevel: 8 } : { parentIds: [prev], requiredSpecialization: { zone, level: 6 } },
+      description: `${CHOICE}Кейстоун. ${f.desc}`,
+    });
+  });
+}
+
 function addRoad(
   parent: string, sx: number, sy: number, zone: SkillNode['zone'], steps: RoadStep[],
 ) {
@@ -239,7 +323,7 @@ function addRoad(
       id, x, y, label: st.label, zone,
       category: st.t === 's' ? 'transit_specialized' : 'feat',
       cost: { type: 'OR', amount: st.t === 'k' ? 2 : 1 },
-      requirements: { parentIds: [prev], requiredSpecialization: { zone, level: reqLevel } },
+      requirements: zone === 'center' ? { parentIds: [prev], minLevel: reqLevel + 2 } : { parentIds: [prev], requiredSpecialization: { zone, level: reqLevel } },
       statModifiers: st.mods,
       description: (st.t === 'k' ? 'Кейстоун. ' : st.t === 'n' ? 'Ноутейбл. ' : '') + (st.desc ?? ''),
     });
@@ -247,17 +331,38 @@ function addRoad(
   });
 }
 
+
+addRoad('g_path_body', 130, -150, 'center', [
+  { t: 's', label: '+1 Ранения', mods: { Ранения: 1 } },
+  { t: 's', label: '+1 Атлетика', mods: { Атлетика: 1 } },
+  { t: 'n', label: 'Железные лёгкие', desc: '−1 усталость от марш-броска/бега.' },
+  { t: 'k', label: 'Несгибаемый', desc: 'PoE Unwavering. Не падаешь от критов; нет уклонения от магии.' },
+]);
+addRoad('g_path_mind', -130, -150, 'center', [
+  { t: 's', label: '+1 Поиск', mods: { 'Поиск Информации': 1 } },
+  { t: 's', label: '+1 Проницательность', mods: { Проницательность: 1 } },
+  { t: 'n', label: 'Быстрый ум', desc: 'Раз/бой перебрось проваленную проверку Разума.' },
+  { t: 'k', label: 'Энциклопедия', desc: 'D&D: всегда знаешь один релевантный факт (1×/сцена).' },
+]);
+addRoad('g_path_master', 0, -200, 'center', [
+  { t: 's', label: '+1 Ремесло', mods: { Ремесло: 1 } },
+  { t: 's', label: '+1 Шаг', mods: { Шаг: 1 } },
+  { t: 'n', label: 'Универсальный набор', desc: 'Импровизация ремесла без штрафа (1×/день).' },
+  { t: 'k', label: 'Мастер на все руки', desc: 'PoE trade-off. Любое ремесло на −1; все ремесла доступны.' },
+]);
 addRoad('sch_witchcraft', -520, 300, 'wisdom', [
   { t: 's', label: '+1 Колдовство', mods: { Колдовство: 1 } },
   { t: 's', label: '+1 Интуиция', mods: { Интуиция: 1 } },
   { t: 'n', label: 'Холодный пакт', desc: 'Раз за бой подготовь приём без +1 усталости.' },
   { t: 'k', label: 'Воля покровителя', desc: 'Раз за отдых игнорируй «1» на Кубе Стиля на одном касте.' },
 ]);
-addRoad('sch_wizardry', -520, -300, 'magic', [
+addRoadFork('sch_wizardry', -520, -300, 'magic', [
   { t: 's', label: 'Арканная мощь', mods: { Волшебство: 1 } },
   { t: 's', label: 'Запас маны', mods: { Усталость: 1 } },
-  { t: 'n', label: 'Эхо заклинания', desc: 'Раз в ход повтори Sигил урона без +1 усталости (минус: тот же элемент).' },
-  { t: 'k', label: 'Разум как броня', desc: 'Раз/бой: 1 рана → +1 усталость вместо раны (минус: не лечит).' },
+  { t: 'n', label: 'Эхо заклинания', desc: 'Раз в ход повтори Sигил урона (тот же элемент).' },
+], [
+  { idSuffix: 'glass', label: 'Стеклянная пушка', group: 'wiz_keystone', desc: 'PoE. Sигилы +1 кость; −1 макс. рана.' },
+  { idSuffix: 'battery', label: 'Арканная батарея', group: 'wiz_keystone', desc: 'D&D. +2 усталость макс.; первый каст в бою бесплатен.' },
 ]);
 addRoad('sch_mysticism', -360, -520, 'magic', [
   { t: 's', label: 'Тонкое зрение', mods: { Мистика: 1 } },
@@ -271,12 +376,27 @@ addRoad('sch_craft', -560, -560, 'magic', [
   { t: 'n', label: 'Быстрая сборка', desc: 'Холодные без подготовки; готовые Sигилы −1 кость урона.' },
   { t: 'k', label: 'Душа ремесленника', desc: 'Артефакты +1 ранг; без фокус-инструмента каст невозможен.' },
 ]);
-addRoad('sch_berserk', 520, -300, 'strength', [
+addRoad('sch_awaken', 560, -440, 'strength', [
+  { t: 's', label: '+1 Усталость', mods: { Усталость: 1 } },
+  { t: 's', label: '+1 Атлетика', mods: { Атлетика: 1 } },
+  { t: 'n', label: 'Дыхание битвы', desc: 'Снимай 1 усталость при убийстве.' },
+  { t: 'k', label: 'Перерождение', desc: 'Раз/день: на 0 ран остаёшься на ногах (1 рана).' },
+]);
+addRoad('sch_smith', 420, -520, 'strength', [
+  { t: 's', label: '+1 Ремесло', mods: { Ремесло: 1 } },
+  { t: 's', label: '+1 Мощь', mods: { Мощь: 1 } },
+  { t: 'n', label: 'Закалка стали', desc: 'Оружие +1 рана vs конструктов/нежити.' },
+  { t: 'k', label: 'Легендарная ковка', desc: '1×/неделя оружие +1 ранг (нужны материалы).' },
+]);
+addRoadFork('sch_berserk', 520, -300, 'strength', [
   { t: 's', label: '+1 урон б.боя', mods: { 'Ближний бой (Мощь)': 1 } },
   { t: 's', label: '+1 Атлетика', mods: { Атлетика: 1 } },
-  { t: 'n', label: 'Кровавая жажда', desc: 'Убил врага -> доп. атака в этот ход.' },
-  { t: 'k', label: 'Неистовство', desc: 'Куб Стиля всегда чётный (нет факапов), но не взрывается.' },
+  { t: 'n', label: 'Кровавая жажда', desc: 'Убил врага → доп. атака в этот ход.' },
+], [
+  { idSuffix: 'fury', label: 'Неистовство', group: 'berserk_keystone', desc: 'Куб Стиля чётный; нет взрыва к6.' },
+  { idSuffix: 'blood', label: 'Кровавый туман', group: 'berserk_keystone', desc: 'PoE. +1 кость при <50% ран; иначе −1 КБ.' },
 ]);
+
 addRoad('sch_ranged', 560, 440, 'dexterity', [
   { t: 's', label: '+1 Дальний бой', mods: { 'Дальний бой': 1 } },
   { t: 's', label: '+1 Внимание', mods: { Внимание: 1 } },
