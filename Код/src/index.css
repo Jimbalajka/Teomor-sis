@@ -2230,3 +2230,34 @@ body {
 .react-flow__edge.edge-dimmed path {
   opacity: 0.12;
 }
+
+.sheet-abilities-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.sheet-abilities-scroll {
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.abilities-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.abilities-table th,
+.abilities-table td {
+  border: 1px solid var(--border);
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+.abilities-table th {
+  background: var(--panel-2);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.abilities-table .ab-name { font-weight: 700; white-space: nowrap; }
+.abilities-table .ab-cost { white-space: nowrap; color: #86efac; }
+.abilities-table .ab-note { color: var(--muted); max-width: 280px; }

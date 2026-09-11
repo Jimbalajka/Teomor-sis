@@ -6,7 +6,7 @@ import type { View } from './views';
 import { TREE_ECONOMY } from './treeEconomy';
 import { auraHint } from './coreRules';
 import { applyPlaytestCatalog } from './cardsData';
-import { PLAYTEST_PRESETS } from './playtestPresets';
+import { PLAYTEST_PRESETS, savePresetAbilities } from './playtestPresets';
 
 const ZONES: { zone: ZoneType; dar: string; branch: string }[] = [
   { zone: 'magic', dar: 'Дар Медведя', branch: 'Магия' },
@@ -86,6 +86,7 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
               dispatch({ type: 'LOAD_PLAYTEST_PRESET', preset: p });
               highlightRoute(p.allocatedNodes);
               setShowRouteHighlight(true);
+              savePresetAbilities(p);
             }}
           >
             {p.label}

@@ -386,6 +386,29 @@ export const initialCards: GameCard[] = [
     profession: 'киборг',
     description: 'Инструмент. Ближний и дальний режим без смены оружия.',
   },
+  // ── D&D распространённые + персонажи ─────────────────
+  { id: 'kvel_pact', category: 'kvel', name: 'Квель Пакта', cost: 0, rank: 10, fatigueMax: 2, profession: 'колдун', description: 'Пакт. Холодные: 2–3. Сигилы покровителя.' },
+  { id: 'sig_magic_missile', category: 'sigil', name: 'Волшебная стрела', cost: 1, damage: '1к4+1', range: '36 клеток', profession: 'маг', description: 'Приём. Три стрелы, автопопадание.' },
+  { id: 'sig_shield', category: 'sigil', name: 'Щит', cost: 1, profession: 'маг', description: 'Реакция. +5 КБ до следующего хода.' },
+  { id: 'sig_misty_step', category: 'sigil', name: 'Туманный шаг', cost: 1, range: '6 клеток', profession: 'маг', description: 'Приём. Телепорт.' },
+  { id: 'sig_dispel', category: 'sigil', name: 'Рассеивание', cost: 2, profession: 'маг', description: 'Приём. Снять магический эффект с цели.' },
+  { id: 'sig_polymorph', category: 'sigil', name: 'Облик', cost: 3, profession: 'маг', description: 'Приём. Форма зверя или гуманоида, 1 мин.' },
+  { id: 'sig_detect_magic', category: 'sigil', name: 'Обнаружение магии', cost: 0, profession: 'маг', description: 'Фокус. Чувствуешь магию 10 мин.' },
+  { id: 'sig_bless', category: 'sigil', name: 'Благословение', cost: 1, profession: 'маг', description: 'Приём. До 3 целей: +1к4 к атакам и спасброскам.' },
+  { id: 'sig_cure_wounds', category: 'sigil', name: 'Лечение ран', cost: 1, profession: 'маг', description: 'Приём. Снимает 1–2 раны.' },
+  { id: 'sig_invisibility', category: 'sigil', name: 'Невидимость', cost: 2, profession: 'маг', description: 'Приём. Невидим до атаки или 1 мин.' },
+  { id: 'sig_thunder_blade', category: 'sigil', name: 'Громовой клинок', cost: 1, damage: '1к8+урон аспекта', profession: 'Виэт', description: 'С аспектом молнии: оружие +1к8 молнии на 1 мин.' },
+  { id: 'sig_viet_assault', category: 'sigil', name: 'Нatiск', cost: 0, profession: 'Виэт', description: 'Сигил стойки Нatiска. ● — две атаки дуэльным мечом.' },
+  { id: 'sig_viet_disarm', category: 'sigil', name: 'Обезоруживание', cost: 0, profession: 'Виэт', description: '● — выбить предмет (спасбросок ловкости).' },
+  { id: 'sig_viet_rook', category: 'sigil', name: 'Рокировка', cost: 0, profession: 'Виэт', description: '● реакция — обмен с союзником, перенаправить атаку.' },
+  { id: 'sig_viet_hare', category: 'sigil', name: 'Зайчик', cost: 0, profession: 'Виэт', description: '● — ослепить на 1 раунд (на солнце).' },
+  { id: 'sig_viet_wounding', category: 'sigil', name: 'Ранение', cost: 0, profession: 'Виэт', description: '● — кровотечение 1к6/раунд (с 10 ур.).' },
+  { id: 'ins_hidden_blade', category: 'instrument', name: 'Скрытый клинок', cost: 0, profession: 'киборг', description: '1к4 колющий. Лёгкое, метательное 6/18 клеток.' },
+  { id: 'sig_cyb_absorb', category: 'sigil', name: 'Absorver Energia', cost: 1, profession: 'киборг', description: 'Reação. Absorve dano de efeito em área.' },
+  { id: 'sig_cyb_target_lock', category: 'sigil', name: 'Bloqueio de Alvo', cost: 1, range: '12 клеток', profession: 'киборг', description: 'Vantagem no próximo ataque à distância contra o alvo.' },
+  { id: 'sig_cyb_confusion', category: 'sigil', name: 'Confusão Coordenada', cost: 1, profession: 'киборг', description: 'Feint: você e droide aliado ganham vantagem no próximo ataque.' },
+  { id: 'sig_cyb_second_skin', category: 'sigil', name: 'Segunda Pele', cost: 0, profession: 'киборг', description: 'Passivo. 17 escudos; resistência física com escudos ativos.' },
+
 ];
 
 export const LS_CARDS_KEY = 'teomor_cards_v2';
