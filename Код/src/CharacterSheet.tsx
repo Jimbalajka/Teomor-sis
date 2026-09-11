@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useSkillTree } from './SkillTreeContext';
 import { raceById } from './races';
 import { backgroundById } from './backgrounds';
+import { AbilitiesTable } from './AbilitiesTable';
+import type { AbilityRow } from './abilitiesTable';
 import {
   BASE_CHAR,
   DERIVED_FIELDS,
@@ -35,6 +37,13 @@ export function CharacterSheet() {
   const proficiencies = state.proficiencies ?? [];
   const { combat } = state;
   const [fields, setFields] = useState<Record<string, string>>(loadSheet);
+  const [abilities, setAbilities] = useState<AbilityRow[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('teomor_abilities_v1') ?? '[]');
+    } catch {
+      return [];
+    }
+  });
 
   useEffect(() => {
     localStorage.setItem(LS_SHEET, JSON.stringify(fields));
@@ -43,7 +52,18 @@ export function CharacterSheet() {
   useEffect(() => {
     const refresh = () => setFields(loadSheet());
     window.addEventListener('teomor-sheet-updated', refresh);
-    return () => window.removeEventListener('teomor-sheet-updated', refresh);
+    const abRefresh = () => {
+      try {
+        setAbilities(JSON.parse(localStorage.getItem('teomor_abilities_v1') ?? '[]'));
+      } catch {
+        setAbilities([]);
+      }
+    };
+    window.addEventListener('teomor-abilities-updated', abRefresh);
+    return () => {
+      window.removeEventListener('teomor-sheet-updated', refresh);
+      window.removeEventListener('teomor-abilities-updated', abRefresh);
+    };
   }, []);
 
   const set = (key: string, val: string) =>
@@ -122,6 +142,8 @@ export function CharacterSheet() {
             .join(' · ')}
         </div>
       )}
+
+      <AbilitiesTable rows={abilities} />
 
       {proficiencies.length > 0 && (
         <div className="sheet-derived-choices panel">

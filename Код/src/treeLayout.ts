@@ -162,13 +162,13 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
 
   const featSlots = nodes.filter((n) => n.category === 'feat_slot').sort((a, b) => a.id.localeCompare(b.id));
   featSlots.forEach((n, i) => {
-    pos.set(n.id, { x: -980, y: -260 + i * 260 });
+    pos.set(n.id, { x: -1180, y: -260 + i * 260 });
     angleOf.set(n.id, 180 * DEG);
   });
 
   const craftSlots = nodes.filter((n) => n.category === 'craft_slot').sort((a, b) => a.id.localeCompare(b.id));
   craftSlots.forEach((n, i) => {
-    pos.set(n.id, { x: 980, y: -260 + i * 260 });
+    pos.set(n.id, { x: 1180, y: -260 + i * 260 });
     angleOf.set(n.id, 0);
   });
 
