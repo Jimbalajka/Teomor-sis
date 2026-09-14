@@ -109,8 +109,10 @@ export const PLAYTEST_PRESETS: PlaytestPreset[] = [
     allocatedNodes: [
       'center_start', 'g_lore', 'g_alert',
       'spec_dexterity', 'sch_cybernetics',
-      'feat_cyb_glitch', 'ts_cyb_analysis', 'feat_cyb_optics',
-      'ts_cyb_plating', 'ts_cyb_ordnance', 'ts_cyb_overclock', 'ts_mark_target',
+      'ts_cyb_implantation', 'ts_cyb_surgery', 'ts_cyb_calibration',
+      'cyb_queima', 'imp_tremor', 'imp_lingua_fogo',
+      'cyb_relampago', 'imp_overclock', 'imp_reflex',
+      'cyb_mente', 'imp_neural_hack',
     ],
     specializationLevels: { center: 0, dexterity: 7, strength: 0, magic: 0, wisdom: 0 },
     orPoints: 0,

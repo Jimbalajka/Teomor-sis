@@ -1,6 +1,18 @@
 # AGENT-CONTEXT — Теомор (живой тезис)
 
-> Обновлять после каждой сессии. Детали — в `Код/src/`, не дублировать сюда.
+> **Первым делом каждую сессию:** этот файл → `docs/core/CORE.md` (эталон правил v2) → `Код/src/`.
+> **Не** book-player.md и **не** быстрый старт для UI правил — только CORE.md.
+> Обновлять после каждой сессии. Детали кода — в `Код/src/`, не дублировать сюда.
+
+## SoT (источники истины)
+
+| Тема | Файл |
+|------|------|
+| **Правила v2 (эталон)** | `teomor-patches/docs/core/CORE.md` |
+| Краткая выжимка | `teomor-patches/docs/CORE-summary.md` |
+| Полная старая книга (справочник) | `rpg-skill-tree-main/docs/book-player.md` в Teomor-sis |
+| Код приложения | `teomor-patches/Код/` (`npm run dev`) |
+| Зеркало | `teomor-patches/day1-bundle/app/src/` |
 
 ## Git / push
 - **Репо:** `Jimbalajka/Teomor-sis` (НЕ agent-sputnik, НЕ Teomor)
@@ -10,28 +22,45 @@
 - **Канон:** `Код/` (npm run dev) + mirror `teomor-patches/day1-bundle/app/src/`
 
 ## Текущий PR
-- #12 — playtest UI fixes (может быть merged)
-- Следующий push — magic branch + sidebar
+- feat/skill-tree-all-branches → main (все 4 дара + центр)
 
 ## Приоритет работ (сейчас)
-1. **UI:** sidebar — прокрутка, крупнее шрифты/кнопки
-2. **Древо:** синяя ветка (Дар Медведя) — 3 школы с разными плюс/минус, дороги, кросс-ветки
-3. **Плейтест 3 перс.** — ОТЛОЖЕНО до нормального древа
-4. Красная/зелёная/янтарная ветки — после синей
+1. **Плейтест 3 перс.** — обновить пресеты под новые ID
+2. UI sidebar — по скринам
+3. Баланс позиций узлов
 
 ## Core v2 (кратко)
 - Валюта: **ОР** | Бой: **КБ**=10+укл+броня | **Раны** 2–6 | **Усталость**
 - Дары: +1 ключ. стат за ур.; дороги `road_sch_*_0..3`
 - Виэт: `sch_viet`, `road_sch_viet_*` | Кибер: `sch_cybernetics`, `road_sch_cybernetics_*`
 
-## Магия — 3 маршрута (синий)
-| Школа | ID | Философия |
-|-------|-----|-----------|
-| Волшебство | `sch_wizardry` | DPS, Sигилы, усталость↑ |
-| Мистика | `sch_mysticism` | контроль, психика, броня↓ |
-| Ремесленник | `sch_craft` | предметы, холодные, без фокуса слабее |
+## Общая ветка (центр)
+- `g_hub` → **⚔ выбор:** `g_path_body` | `g_path_mind` | `g_path_master` + PoE-roads
+- Кольцо: `g_resolve`, `g_alert`, синтез `g_second_wind` (2 родителя)
 
-Кросс-узлы: `feat_warmage`, `feat_oracle`, `feat_sigil_scribe`, `ts_arcane_bridge` (2 школы).
+## Механика развилок
+- `exclusiveGroup` в types + nodeStatus — один узел из группы
+- Суб-классы: `prof_${school}` (один на школу)
+- Подсказка: `⚔ Выбор` в description + tooltip
+
+## Магия (синий) — сделано
+- D&D: Arcane Recovery, Portent, Evoker/Abjurer, Grim Harvest, Stoneskin…
+- PoE: keystone fork `wiz_keystone` (стекло vs батарея)
+- Forks: necro/blood/chrono/illus/geo/mystic/alch/ench/artifice
+
+## Сила (красный) — сделано
+- Viet stances: `viet_stance` exclusive
+- Berserk/Smith/Awaken roads + `berserk_keystone` fork
+- `tough_style`, `fork_berserk`, `fork_smith`, `feat_iron_blood`
+
+## Ловкость (зелёный) — сделано
+- Duel/Ranged/Stealth/Acro/Cyber/Pero roads + keystone forks
+- `ranged_style`, `acro_style`, `cyber_path`, `fork_pero`, `feat_shadow_dancer`
+
+## Мудрость (янтарный) — сделано
+- Witch/Psi/Divine/Leader roads + keystone forks
+- Warlock/Sorcerer/Pactmaker/Summoner/Divine prof forks
+- `feat_witch_oracle` (witch + psionics)
 
 ## Не делать
 - Не менять архитектуру UI/CSS без запроса
@@ -43,4 +72,6 @@
 - Не трогать пресеты пока не готова ветка
 
 ## Changelog
-- 2026-03-28: файл создан; фокус на magic branch + sidebar
+- 2026-03-28: green + amber + PR (all branches complete)
+- 2026-03-28: general branch + exclusiveGroup + magic/red rework (D&D/PoE forks)
+- 2026-03-28: файл создан
