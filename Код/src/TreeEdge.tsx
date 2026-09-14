@@ -1,6 +1,6 @@
 import {
   BaseEdge,
-  getBezierPath,
+  getSmoothStepPath,
   useInternalNode,
   Position,
   type EdgeProps,
@@ -8,21 +8,15 @@ import {
   type Node,
 } from '@xyflow/react';
 
-// Плавающее ребро древа: крепится к БЛИЖАЙШЕЙ грани узла (не только сверху/снизу).
-// Всё в одном файле с уникальным именем — чтобы исключить коллизию регистра
-// (FloatingEdge.tsx / floatingEdge.ts) на регистро-нечувствительных ФС.
-
 function nodeIntersection(a: InternalNode<Node>, b: InternalNode<Node>) {
   const w = (a.measured.width ?? 0) / 2;
   const h = (a.measured.height ?? 0) / 2;
   const ap = a.internals.positionAbsolute;
   const bp = b.internals.positionAbsolute;
-
   const x2 = ap.x + w;
   const y2 = ap.y + h;
   const x1 = bp.x + (b.measured.width ?? 0) / 2;
   const y1 = bp.y + (b.measured.height ?? 0) / 2;
-
   const xx1 = (x1 - x2) / (2 * w) - (y1 - y2) / (2 * h);
   const yy1 = (x1 - x2) / (2 * w) + (y1 - y2) / (2 * h);
   const a1 = 1 / (Math.abs(xx1) + Math.abs(yy1) || 1);
@@ -45,6 +39,7 @@ function edgeSide(node: InternalNode<Node>, point: { x: number; y: number }) {
   return Position.Top;
 }
 
+/** Ровные «шоссе» как в PoE — smoothstep без плавных дуг. */
 export function TreeFloatingEdge({ id, source, target, style, markerEnd }: EdgeProps) {
   const s = useInternalNode(source);
   const t = useInternalNode(target);
@@ -52,14 +47,15 @@ export function TreeFloatingEdge({ id, source, target, style, markerEnd }: EdgeP
 
   const sp = nodeIntersection(s, t);
   const tp = nodeIntersection(t, s);
-  const [path] = getBezierPath({
+  const [path] = getSmoothStepPath({
     sourceX: sp.x,
     sourceY: sp.y,
     targetX: tp.x,
     targetY: tp.y,
     sourcePosition: edgeSide(s, sp),
     targetPosition: edgeSide(t, tp),
+    borderRadius: 0,
   });
 
-  return <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} />;
+  return <BaseEdge id={id} path={path} style={{ ...style, strokeLinecap: 'square' }} markerEnd={markerEnd} />;
 }

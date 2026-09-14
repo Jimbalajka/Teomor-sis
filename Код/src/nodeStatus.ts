@@ -13,6 +13,28 @@ function specializationSatisfied(node: SkillNode, state: SkillTreeState): boolea
   return (state.specializationLevels[req.zone] ?? 0) >= req.level;
 }
 
+
+function isDescendantOf(nodeId: string, schoolId: string, data: TreeData): boolean {
+  const byId = new Map(data.nodes.map((n) => [n.id, n]));
+  let cur = byId.get(nodeId);
+  const seen = new Set<string>();
+  while (cur && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    if (cur.id === schoolId) return true;
+    const pid = cur.requirements?.parentIds?.[0];
+    if (!pid) break;
+    cur = byId.get(pid);
+  }
+  return false;
+}
+
+function schoolSatisfied(node: SkillNode, state: SkillTreeState, data?: TreeData): boolean {
+  const sid = node.requirements?.requiredSchool;
+  if (!sid || !data) return true;
+  if (state.allocatedNodes.includes(sid)) return true;
+  return state.allocatedNodes.some((id) => isDescendantOf(id, sid, data));
+}
+
 function minLevelSatisfied(node: SkillNode, state: SkillTreeState): boolean {
   const min = node.requirements?.minLevel;
   return min == null || state.level >= min;
@@ -78,6 +100,7 @@ export function requirementsMet(
     parentsSatisfied(node, state) &&
     specializationSatisfied(node, state) &&
     minLevelSatisfied(node, state) &&
+    schoolSatisfied(node, state, data) &&
     slotBlock(node, state, data) === null &&
     exclusiveBlock(node, state, data) === null
   );

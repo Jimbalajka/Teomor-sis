@@ -53,6 +53,9 @@ export function CustomSkillNode({ data }: NodeProps) {
         ) : (
           <>
             <strong className="tooltip-title">{node.label}</strong>
+            {node.exclusiveGroup && (
+              <p className="tooltip-choice">⚔ Развилка — только один вариант из группы</p>
+            )}
             {node.description && <p className="tooltip-desc">{node.description}</p>}
             {node.statModifiers && (
               <ul className="tooltip-stats">

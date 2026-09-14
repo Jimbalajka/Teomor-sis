@@ -3,9 +3,8 @@ import type { NodeStatus, SkillNode, SkillTreeState } from './types';
 function parentsSatisfied(node: SkillNode, state: SkillTreeState): boolean {
   const parents = node.requirements?.parentIds;
   if (!parents || parents.length === 0) return true;
-  return parents.some(
-    (id) => id === 'center_start' || state.allocatedNodes.includes(id),
-  );
+  const ok = (id: string) => id === 'center_start' || state.allocatedNodes.includes(id);
+  return parents.every(ok);
 }
 
 function specializationSatisfied(node: SkillNode, state: SkillTreeState): boolean {
@@ -35,6 +34,24 @@ function canAfford(node: SkillNode, state: SkillTreeState): boolean {
 
 type TreeData = { nodes: SkillNode[] };
 
+
+function exclusiveBlock(
+  node: SkillNode,
+  state: SkillTreeState,
+  data?: TreeData,
+): string | null {
+  const group = node.exclusiveGroup;
+  if (!group || !data) return null;
+  const takenId = state.allocatedNodes.find((id) => {
+    if (id === node.id) return false;
+    const other = data.nodes.find((n) => n.id === id);
+    return other?.exclusiveGroup === group;
+  });
+  if (!takenId) return null;
+  const taken = data.nodes.find((n) => n.id === takenId);
+  return `⚔ Выбор: уже взято «${taken?.label ?? takenId}». Другие варианты недоступны.`;
+}
+
 function slotBlock(
   node: SkillNode,
   state: SkillTreeState,
@@ -61,7 +78,8 @@ export function requirementsMet(
     parentsSatisfied(node, state) &&
     specializationSatisfied(node, state) &&
     minLevelSatisfied(node, state) &&
-    slotBlock(node, state, data) === null
+    slotBlock(node, state, data) === null &&
+    exclusiveBlock(node, state, data) === null
   );
 }
 
@@ -82,7 +100,10 @@ export function blockReason(
   data?: TreeData,
 ): string | null {
   if (state.allocatedNodes.includes(node.id)) return 'Уже изучено';
-  if (!parentsSatisfied(node, state)) return 'Родительский узел не изучен';
+  if (!parentsSatisfied(node, state)) {
+    const n = node.requirements?.parentIds?.length ?? 0;
+    return n > 1 ? 'Не все родительские узлы изучены' : 'Родительский узел не изучен';
+  }
   if (!specializationSatisfied(node, state)) {
     const req = node.requirements!.requiredSpecialization!;
     return `Требуется ${req.level} уровень ветки`;
@@ -92,6 +113,8 @@ export function blockReason(
   }
   const slot = slotBlock(node, state, data);
   if (slot) return slot;
+  const excl = exclusiveBlock(node, state, data);
+  if (excl) return excl;
   if (!canAfford(node, state)) return 'Недостаточно ОР';
   return null;
 }

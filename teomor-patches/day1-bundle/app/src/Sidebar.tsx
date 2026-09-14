@@ -51,6 +51,7 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
 
   return (
     <aside className="sidebar">
+      <div className="sidebar-scroll">
       <h1 className="sidebar-title">Теомор</h1>
 
       <div className="view-tabs">
@@ -232,6 +233,7 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
         )}
       </Section>
 
+      </div>
       <div className="sidebar-footer">
         <button className={`btn ${editMode ? 'btn-primary' : ''}`} onClick={onToggleEdit}>
           {editMode ? '✓ Редактор' : '✎ Редактор'}

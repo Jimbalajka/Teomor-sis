@@ -6,7 +6,7 @@ import type { View } from './views';
 import { TREE_ECONOMY } from './treeEconomy';
 import { auraHint } from './coreRules';
 import { applyPlaytestCatalog } from './cardsData';
-import { PLAYTEST_PRESETS } from './playtestPresets';
+import { PLAYTEST_PRESETS, savePresetAbilities } from './playtestPresets';
 
 const ZONES: { zone: ZoneType; dar: string; branch: string }[] = [
   { zone: 'magic', dar: 'Дар Медведя', branch: 'Магия' },
@@ -43,7 +43,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) {
-  const { state, dispatch, totalStatModifiers, kb } = useSkillTree();
+  const { state, dispatch, totalStatModifiers, kb, highlightRoute, setShowRouteHighlight } = useSkillTree();
   const totals = Object.entries(totalStatModifiers);
   const race = raceById(state.race);
   const { combat } = state;
@@ -51,6 +51,7 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
 
   return (
     <aside className="sidebar">
+      <div className="sidebar-scroll" onWheel={(e) => e.stopPropagation()}>
       <h1 className="sidebar-title">Теомор</h1>
 
       <div className="view-tabs">
@@ -83,6 +84,9 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
             onClick={() => {
               applyPlaytestCatalog(p.cardIds);
               dispatch({ type: 'LOAD_PLAYTEST_PRESET', preset: p });
+              highlightRoute(p.allocatedNodes);
+              setShowRouteHighlight(true);
+              savePresetAbilities(p);
             }}
           >
             {p.label}
@@ -181,7 +185,7 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
         </Section>
       )}
 
-      <Section title="Дары" defaultOpen={false}>
+      <Section title="Дары" defaultOpen={true}>
         {ZONES.map(({ zone, dar, branch }) => {
           const level = state.specializationLevels[zone] ?? 0;
           const opened = level >= 1;
@@ -232,6 +236,7 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
         )}
       </Section>
 
+      </div>
       <div className="sidebar-footer">
         <button className={`btn ${editMode ? 'btn-primary' : ''}`} onClick={onToggleEdit}>
           {editMode ? '✓ Редактор' : '✎ Редактор'}

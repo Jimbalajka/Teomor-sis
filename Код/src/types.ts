@@ -47,6 +47,8 @@ export interface SkillNode {
     parentIds?: string[];
     requiredSpecialization?: { zone: ZoneType; level: number };
     minLevel?: number;
+    /** Школа (subcategory): достаточно взять школу или любой навык внутри неё — без суб-класса. */
+    requiredSchool?: string;
   };
   choices?: NodeChoice[];
   statModifiers?: Record<string, number>;

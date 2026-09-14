@@ -11,7 +11,7 @@ export function ChoiceModal({
   node: SkillNode;
   onClose: () => void;
 }) {
-  const { dispatch } = useSkillTree();
+  const { dispatch, treeData } = useSkillTree();
   const choices = node.choices ?? [];
   const [picked, setPicked] = useState<Record<string, string[]>>({});
 
@@ -35,7 +35,7 @@ export function ChoiceModal({
 
   const confirm = () => {
     const flat = Object.values(picked).flat();
-    dispatch({ type: 'ALLOCATE_NODE', node, choices: { [node.id]: flat } });
+    dispatch({ type: 'ALLOCATE_NODE', node, choices: { [node.id]: flat }, treeData });
     onClose();
   };
 
