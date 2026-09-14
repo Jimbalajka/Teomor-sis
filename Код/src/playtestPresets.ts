@@ -1,6 +1,6 @@
 import type { ZoneType } from './types';
-import type { AbilityRow } from './abilitiesTable';
-import { abilitiesFromCardIds, mergeAbilityRows } from './abilitiesTable';
+import type { AbilityRow } from './abilityRows';
+import { abilitiesFromCardIds, mergeAbilityRows } from './abilityRows';
 
 export interface PlaytestPreset {
   id: string;

@@ -3,7 +3,7 @@ import { useSkillTree } from './SkillTreeContext';
 import { raceById } from './races';
 import { backgroundById } from './backgrounds';
 import { AbilitiesTable } from './AbilitiesTable';
-import type { AbilityRow } from './abilitiesTable';
+import type { AbilityRow } from './abilityRows';
 import {
   BASE_CHAR,
   DERIVED_FIELDS,
