@@ -1,4 +1,4 @@
-import type { AbilityRow } from './abilitiesTable';
+import type { AbilityRow } from './abilityRows';
 
 export function AbilitiesTable({ rows }: { rows: AbilityRow[] }) {
   if (rows.length === 0) return null;
