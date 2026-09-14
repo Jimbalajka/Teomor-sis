@@ -10,9 +10,45 @@
 |------|------|
 | **Правила v2 (эталон)** | `teomor-patches/docs/core/CORE.md` |
 | Краткая выжимка | `teomor-patches/docs/CORE-summary.md` |
+| **Каталог сигилов** | `teomor-patches/docs/design/sigil-catalog.md` |
+| **Каталог аспектов** | `teomor-patches/docs/design/aspect-catalog.md` |
+| **Каталог квелей** | `teomor-patches/docs/design/kvel-catalog.md` |
+| **Каталог квелей** | `teomor-patches/docs/design/kvel-catalog.md` |
 | Полная старая книга (справочник) | `rpg-skill-tree-main/docs/book-player.md` в Teomor-sis |
 | Код приложения | `teomor-patches/Код/` (`npm run dev`) |
 | Зеркало | `teomor-patches/day1-bundle/app/src/` |
+
+
+## Режим работы — как «Боту 3» (обязательно)
+
+Пользователь просил вести себя **как Боту 3**: тот не терял контекст, потому что **писал в файлы и коммитил**, а не «держал в голове».
+
+### Старт каждой сессии по Теомору (до первого ответа)
+1. Прочитать **этот файл** целиком.
+2. Прочитать `docs/core/CORE.md` (правила v2).
+3. `git log -5 --oneline` + `git status` в agent и/или Teomor-sis.
+4. Только потом код / правки / вопросы пользователю.
+
+### «Запомни» / PDF / контекст из чата
+- **Сразу** записать в `AGENT-CONTEXT.md` (решения, приоритеты) или `docs/reference/user-profile.md` (личные prefs).
+- **Сразу** `git commit` — в том же ходе, до «готово».
+- Ответить: *записано в …, коммит …* — не «хорошо, запомню».
+
+### Запрещено (из-за этого пользователь злится)
+- Спрашивать «какой проект?» — это **Теомор**, контекст здесь.
+- Переписывать правила не из CORE.md (book-player — только справочник).
+- Обещать «10 минут» и молчать — сразу сказать, что сломалось.
+- Делать вид, что контекст есть, **не открыв файлы**.
+
+### Конец сессии / после значимой работы
+- Обновить § Changelog и § Текущий PR в этом файле.
+- Закоммитить незакрытый код в `Код/src/`.
+- PR: `Jimbalajka/Teomor-sis`, токен в `.env`, не спрашивать.
+
+### Текущее состояние (обновлять!)
+- **PR:** https://github.com/Jimbalajka/Teomor-sis/pull/20 (`feat/teomor-core-v2-day1` → `main`)
+- **Локальная ветка agent:** `feat/teomor-core-v2-day1`
+- **Канон кода:** `teomor-patches/Код/` → mirror `day1-bundle/app/src/`
 
 ## Git / push
 - **Репо:** `Jimbalajka/Teomor-sis` (НЕ agent-sputnik, НЕ Teomor)
@@ -22,7 +58,7 @@
 - **Канон:** `Код/` (npm run dev) + mirror `teomor-patches/day1-bundle/app/src/`
 
 ## Текущий PR
-- feat/skill-tree-all-branches → main (все 4 дара + центр)
+- **#20** https://github.com/Jimbalajka/Teomor-sis/pull/20 — `feat/teomor-core-v2-day1` → `main`
 
 ## Приоритет работ (сейчас)
 1. **Плейтест 3 перс.** — обновить пресеты под новые ID
@@ -53,9 +89,14 @@
 - Berserk/Smith/Awaken roads + `berserk_keystone` fork
 - `tough_style`, `fork_berserk`, `fork_smith`, `feat_iron_blood`
 
-## Ловкость (зелёный) — сделано
-- Duel/Ranged/Stealth/Acro/Cyber/Pero roads + keystone forks
-- `ranged_style`, `acro_style`, `cyber_path`, `fork_pero`, `feat_shadow_dancer`
+## Ловкость (зелёный) — Дар Змея (2026-09-14)
+- **6 профессий:** Аристократ, Стрелок, Тень, Цигун, Наемник Туо (5 кланов), Кибернетика
+- **Развилка:** 2 базовых навыка → продолжение ИЛИ углубление A ИЛИ B (вручную exclusive)
+- **Туо:** без продолжения — сразу 5 кланов (`st_tuo_*`) после `ts_tuo_base2`
+- **Афферист:** `prof_shadow_affair` требует **2 ур. Дара Голубя**
+- **Цигун ≠ Изумрудная стопа:** ци-серии vs печати-конечности
+- **Кибернетика:** имплант = сигил; квели `cyb_queima` / `cyb_mente` / `cyb_relampago`
+- **Код:** `Код/src/dexterityProfessions.ts` + spread в `skillTreeData.ts`
 
 ## Мудрость (янтарный) — сделано
 - Witch/Psi/Divine/Leader roads + keystone forks
@@ -75,3 +116,4 @@
 - 2026-03-28: green + amber + PR (all branches complete)
 - 2026-03-28: general branch + exclusiveGroup + magic/red rework (D&D/PoE forks)
 - 2026-03-28: файл создан
+- 2026-09-11: режим «Боту 3» в AGENT-CONTEXT; PR #20; CORE.md SoT

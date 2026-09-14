@@ -1,4 +1,5 @@
 import type { SkillTreeData, SkillNode, SkillEdge } from './types';
+import { dexterityProfessionNodes } from './dexterityProfessions';
 
 // Древо «Теомор». Специализации (Дары) — прямо от центра. Внутри Дара: школы
 // (subcategory) = пути Квеля; под школами — суб-типы профессий (transit_specialized)
@@ -10,8 +11,7 @@ import type { SkillTreeData, SkillNode, SkillEdge } from './types';
 //  МУДРОСТЬ (Дар Голубя): Колдовство {Колдун, Чародей, Пактер, Призыватель};
 //    Псионика {Псионик}; Божественное/Звериная {Шаман, Друид, Жрец, Паладин}; Лидерство.
 //  СИЛА (Дар Зюбания): Берсерк, Высвобождение, Кузнечное, Стойкость (+ Боевой маг).
-//  ЛОВКОСТЬ (Дар Змея): Дуэль, Стрельба, Скрытность, Акробатика, Перо {Печатник Туо,
-//    Рунописец, Художник}.
+//  ЛОВКОСТЬ (Дар Змея): Аристократ, Стрелок, Тень, Цигун, Наемник Туо, Кибернетика.
 
 // Хелперы для краткости.
 const school = (id: string, x: number, y: number, label: string, zone: SkillNode['zone'], desc: string): SkillNode => ({
@@ -98,33 +98,8 @@ const nodes: SkillNode[] = [
   { id: 'ts_viet_wounding', x: 100, y: -640, label: 'Ранящий стиль', zone: 'strength', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_viet_stance_def'], requiredSpecialization: { zone: 'strength', level: 3 } }, description: 'Успешная быстрая атака — кровотечение (1 рана в начале хода цели, 1 раунд).' },
 
   // ════════ ДАР ЗМЕЯ — ЛОВКОСТЬ (зелёный) ══════════════════
-  { id: 'spec_dexterity', x: 340, y: 340, label: 'Дар Змея', zone: 'dexterity', category: 'specialization', cost: { type: 'OR', amount: 2 }, level: 0, maxLevel: 10, requirements: { parentIds: ['center_start'] }, description: 'Ловкость. Дальний бой, дуэль, скрытность, Перо. До 10 за ОР.' },
-  { ...school('sch_duel', 520, 300, 'Дуэль', 'dexterity', 'Форма Клинка: реакции, парирование.'), requirements: { parentIds: ['spec_dexterity'], requiredSpecialization: { zone: 'dexterity', level: 1 } } },
-  { id: 'ts_parry', x: 680, y: 260, label: 'Парирование', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_duel'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, description: 'Реакция: ответная атака на промах врага.' },
-  { ...school('sch_ranged', 560, 440, 'Стрельба', 'dexterity', 'Форма Прицела: дальность, точность.'), requirements: { parentIds: ['spec_dexterity'], requiredSpecialization: { zone: 'dexterity', level: 1 } } },
-  { id: 'ts_precshot', x: 720, y: 420, label: 'Точный выстрел', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_ranged'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, statModifiers: { 'Дальний бой': 1 }, description: '+1 к Дальнему бою; игнор половины укрытия.' },
-  { id: 'ts_volley', x: 700, y: 520, label: 'Шквал', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['sch_ranged'], requiredSpecialization: { zone: 'dexterity', level: 4 } }, description: 'Три снаряда по разным целям со штрафом.' },
-  { ...school('sch_stealth', 420, 540, 'Скрытность', 'dexterity', 'Путь тени: невидимость, первый удар.'), requirements: { parentIds: ['spec_dexterity'], requiredSpecialization: { zone: 'dexterity', level: 1 } } },
-  { id: 'ts_shadowstrike', x: 560, y: 620, label: 'Удар из тени', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_stealth'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, statModifiers: { Скрытность: 1 }, description: '+1 к Скрытности; урон из невидимости с преимуществом.' },
-  { ...school('sch_acrobatics', 300, 560, 'Акробатика', 'dexterity', 'Подвижность, уклонение, инициатива.'), requirements: { parentIds: ['spec_dexterity'], requiredSpecialization: { zone: 'dexterity', level: 1 } } },
-  { id: 'ts_evasion', x: 340, y: 700, label: 'Уклонение', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_acrobatics'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, statModifiers: { Уклонение: 1 }, description: '+1 к Уклонению (КБ).' },
-  // Перо + суб-типы
-  { ...school('sch_pero', 540, 600, 'Перо', 'dexterity', 'Мастерство знаков и образов (Моторика).'), requirements: { parentIds: ['spec_dexterity'], requiredSpecialization: { zone: 'dexterity', level: 1 } } },
-  prof('st_scribe', 700, 600, 'Печатник Туо', 'dexterity', 'sch_pero', 'Суб-тип: печати Туо — быстрое черчение боевых знаков.'),
-  prof('st_runescribe', 720, 680, 'Рунописец', 'dexterity', 'sch_pero', 'Суб-тип: руны-ловушки и отложенные эффекты.'),
-  prof('st_artist', 600, 720, 'Художник', 'dexterity', 'sch_pero', 'Суб-тип: живые образы, иллюзии через рисунок.'),
-
-  // ════════ КИБЕРНЕТИКА — импланты (Дар Змея) ═════════════════
-  { ...school('sch_cybernetics', 180, 420, 'Кибернетика', 'dexterity', 'Импланты, протоколы, боевая аугментация (джухдес).'), requirements: { parentIds: ['spec_dexterity'], requiredSpecialization: { zone: 'dexterity', level: 1 } } },
-  { id: 'feat_cyb_cold', x: 60, y: 480, label: 'Хладнокровный', zone: 'dexterity', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['sch_cybernetics'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, description: 'Черта. Иммунитет к очарованию и страху.' },
-  { id: 'ts_cyb_analysis', x: 180, y: 520, label: 'Тактический анализ', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_cybernetics'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, statModifiers: { Анализ: 2 }, description: '+2 Анализ (сенсорный имплант).' },
-  { id: 'feat_cyb_glitch', x: 300, y: 480, label: 'Сбой протокола', zone: 'dexterity', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_cybernetics'], requiredSpecialization: { zone: 'dexterity', level: 2 } }, description: 'Черта. При провале с «1» на к6 — брось к4: 1–2 имплант даёт сбой.' },
-  { id: 'ts_cyb_overclock', x: 120, y: 620, label: 'Разгон', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_cyb_analysis'], requiredSpecialization: { zone: 'dexterity', level: 3 } }, description: 'Открывает приём «Ускорение» (карта).' },
-  { id: 'ts_cyb_ordnance', x: 260, y: 640, label: 'Орудийный модуль', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_cybernetics'], requiredSpecialization: { zone: 'dexterity', level: 3 } }, statModifiers: { 'Дальний бой': 1 }, description: 'Встроенное оружие. Карты: бомба, обстрел, деструкция.' },
-  { id: 'ts_cyb_plating', x: 360, y: 680, label: 'Бронепластины', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_cyb_ordnance'], requiredSpecialization: { zone: 'dexterity', level: 4 } }, statModifiers: { Броня: 1 }, description: '+1 к броне (встроенная). Суммируется с полем «Броня +» в Sidebar.' },
-  { id: 'feat_cyb_nanites', x: 400, y: 560, label: 'Нанорой', zone: 'dexterity', category: 'feat', cost: { type: 'OR', amount: 2 }, requirements: { parentIds: ['ts_cyb_overclock'], requiredSpecialization: { zone: 'dexterity', level: 4 } }, description: 'Раз за отдых сними 1 рану без магии. В бою — +1 к спасброскам от яда/болезни.' },
-  { id: 'ts_cyb_ecm', x: 320, y: 720, label: 'РЭБ-модуль', zone: 'dexterity', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['feat_cyb_glitch'], requiredSpecialization: { zone: 'dexterity', level: 3 } }, statModifiers: { Уклонение: 1 }, description: '+1 Уклонение против дальнего огня и наведённых систем.' },
-  { id: 'feat_cyb_optics', x: 440, y: 640, label: 'Оптический пакет', zone: 'dexterity', category: 'feat', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['ts_cyb_analysis'], requiredSpecialization: { zone: 'dexterity', level: 3 } }, description: 'Фокус: тепловизор и «рентген» лёгких укрытий; скан с усталостью 1 на 1 раунд.' },
+  { id: 'spec_dexterity', x: 340, y: 340, label: 'Дар Змея', zone: 'dexterity', category: 'specialization', cost: { type: 'OR', amount: 2 }, level: 0, maxLevel: 10, requirements: { parentIds: ['center_start'] }, description: 'Ловкость. 6 профессий: Аристократ, Стрелок, Тень, Цигун, Наемник Туo, Кибернетика. До 10 за ОР.' },
+  ...dexterityProfessionNodes,
 
   // ════════ ДАР ГОЛУБЯ — МУДРОСТЬ / СТЕРЖЕНЬ (янтарный) ═════
   { id: 'spec_wisdom', x: -340, y: 340, label: 'Дар Голубя', zone: 'wisdom', category: 'specialization', cost: { type: 'OR', amount: 2 }, level: 0, maxLevel: 10, requirements: { parentIds: ['center_start'] }, description: 'Мудрость (Стержень). Влияние, воля, интуитивная/звериная магия. До 10 за ОР.' },
@@ -233,6 +208,42 @@ addRoad('sch_berserk', 520, -300, 'strength', [
   { t: 's', label: '+1 Атлетика', mods: { Атлетика: 1 } },
   { t: 'n', label: 'Кровавая жажда', desc: 'Убил врага -> доп. атака в этот ход.' },
   { t: 'k', label: 'Неистовство', desc: 'Куб Стиля всегда чётный (нет факапов), но не взрывается.' },
+]);
+addRoad('sch_duel', 520, 300, 'dexterity', [
+  { t: 's', label: '+1 точность', mods: { 'Ближний бой (Точность)': 1 } },
+  { t: 's', label: '+1 Запугивание', mods: { Запугивание: 1 } },
+  { t: 'n', label: 'Вызов на дуэль', desc: 'Цель атакует только тебя 1 раунд.' },
+  { t: 'k', label: 'Придворная честь', desc: 'В дуэли 1 на 1 — +2 к попаданию и +1 рана.' },
+]);
+addRoad('sch_acrobatics', 300, 560, 'dexterity', [
+  { t: 's', label: '+1 Уклонение', mods: { Уклонение: 1 } },
+  { t: 's', label: '+1 Шаг', mods: { Шаг: 1 } },
+  { t: 'n', label: 'Поток ци', desc: '+1 удар в серии ци за ранг Квеля.' },
+  { t: 'k', label: 'Железное дыхание', desc: 'Раз за бой игнорируй 1 рану от безоружной атаки.' },
+]);
+addRoad('sch_pero', 540, 600, 'dexterity', [
+  { t: 's', label: '+1 Печати', mods: { Печати: 1 } },
+  { t: 's', label: '+1 История', mods: { История: 1 } },
+  { t: 'n', label: 'Быстрое черчение', desc: 'Охт-печать бонусным действием (1/ход).' },
+  { t: 'k', label: 'Геометрия клана', desc: 'Раз за отдых объедини 2 печати Уур.' },
+]);
+addRoad('sch_duel', 520, 300, 'dexterity', [
+  { t: 's', label: '+1 точность', mods: { 'Ближний бой (Точность)': 1 } },
+  { t: 's', label: '+1 Запугивание', mods: { Запугивание: 1 } },
+  { t: 'n', label: 'Вызов на дуэль', desc: 'Цель атакует только тебя 1 раунд.' },
+  { t: 'k', label: 'Придворная честь', desc: 'В дуэли 1 на 1 — +2 к попаданию и +1 рана.' },
+]);
+addRoad('sch_acrobatics', 300, 560, 'dexterity', [
+  { t: 's', label: '+1 Уклонение', mods: { Уклонение: 1 } },
+  { t: 's', label: '+1 Шаг', mods: { Шаг: 1 } },
+  { t: 'n', label: 'Поток ци', desc: '+1 удар в серии ци за ранг Квеля.' },
+  { t: 'k', label: 'Железное дыхание', desc: 'Раз за бой игнорируй 1 рану от безоружной атаки.' },
+]);
+addRoad('sch_pero', 540, 600, 'dexterity', [
+  { t: 's', label: '+1 Печати', mods: { Печати: 1 } },
+  { t: 's', label: '+1 История', mods: { История: 1 } },
+  { t: 'n', label: 'Быстрое черчение', desc: 'Охт-печать бонусным действием (1/ход).' },
+  { t: 'k', label: 'Геометрия клана', desc: 'Раз за отдых объедини 2 печати Уур.' },
 ]);
 addRoad('sch_ranged', 560, 440, 'dexterity', [
   { t: 's', label: '+1 Дальний бой', mods: { 'Дальний бой': 1 } },
