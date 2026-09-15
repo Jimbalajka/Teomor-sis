@@ -38,11 +38,37 @@ body {
 }
 
 /* ── Canvas ─────────────────────────────────────────── */
+
+/* Древо: фон экрана фиксирован — не ездит при pan/zoom */
+.canvas-tree {
+  position: relative;
+  background: radial-gradient(circle at 50% 48%, #0e1219 0%, #070a0f 78%) !important;
+}
+.canvas-tree::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.55;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--z-magic) 7%, transparent) 0 25%, transparent 25%),
+    linear-gradient(225deg, color-mix(in srgb, var(--z-strength) 7%, transparent) 0 25%, transparent 25%),
+    linear-gradient(45deg, color-mix(in srgb, var(--z-dexterity) 7%, transparent) 0 25%, transparent 25%),
+    linear-gradient(315deg, color-mix(in srgb, var(--z-wisdom) 7%, transparent) 0 25%, transparent 25%);
+}
+.canvas-tree .tree-canvas-wrap,
+.canvas-tree .rf-wrap {
+  position: relative;
+  z-index: 1;
+}
+
 .canvas {
   flex: 1;
   position: relative;
   min-height: 0;
-  overflow-y: auto;
+  min-width: 0;
+  overflow: hidden;
   background:
     radial-gradient(circle at 50% 45%, #10151f 0%, #070a0f 70%);
 }
@@ -63,11 +89,31 @@ body {
   position: relative;
   user-select: none;
 }
+.status-locked {
+  opacity: 0.38;
+}
+.status-locked .node-label {
+  font-size: 9px;
+}
 .node:hover {
   transform: scale(1.08);
   z-index: 20;
 }
-.node-label {
+.node-bonus {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 2px;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.node-spec .node-bonus,
+.node-spec .node-label {
+  transform: rotate(-45deg);
+}
+.node-spec .node-label {
+
   font-size: 10px;
   line-height: 1.12;
   font-weight: 600;
@@ -94,34 +140,97 @@ body {
   box-shadow: 0 0 22px rgba(255, 255, 255, 0.7);
   animation: pulse 2.2s ease-in-out infinite;
 }
-.node-root .node-label {
+.node-root .node-bonus {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 2px;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.node-spec .node-bonus,
+.node-spec .node-label {
+  transform: rotate(-45deg);
+}
+.node-spec .node-label {
+
   color: #0b0e14;
 }
 .node-spec {
-  width: 100px;
-  height: 100px;
+  width: 88px;
+  height: 88px;
+  border-radius: 10px;
+  transform: rotate(45deg);
+}
+.node-spec .node-bonus {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 2px;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.node-spec .node-bonus,
+.node-spec .node-label {
+  transform: rotate(-45deg);
+}
+.node-spec .node-label {
+
+  transform: rotate(-45deg);
+  max-width: 62px;
+}
+.node-spec.node-diamond {
+  box-shadow: 0 0 18px color-mix(in srgb, var(--zc) 55%, transparent);
 }
 
 /* Транзитные узлы — мелкие (их много). */
 .node-transit {
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
 }
-.node-transit .node-label {
+.node-transit .node-bonus {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 2px;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.node-spec .node-bonus,
+.node-spec .node-label {
+  transform: rotate(-45deg);
+}
+.node-spec .node-label {
+
   font-size: 9px;
 }
 
 /* Слоты Черт (слева) и Ремёсел (справа) — квадратные, особый цвет. */
 .node-featslot,
 .node-craftslot {
+  width: 72px;
+  height: 72px;
+  width: 72px;
+  height: 72px;
   border-radius: 12px;
   width: 84px;
   height: 64px;
 }
 .node-featslot {
+  width: 72px;
+  height: 72px;
+  width: 72px;
+  height: 72px;
   --zc: #a78bfa; /* фиолетовый — Черты */
 }
 .node-craftslot {
+  width: 72px;
+  height: 72px;
+  width: 72px;
+  height: 72px;
   --zc: #f59e0b; /* янтарный — Ремёсла */
 }
 .node-featslot.status-available,
@@ -143,7 +252,21 @@ body {
 .node-feat.status-available {
   box-shadow: 0 0 16px color-mix(in srgb, var(--zc) 60%, transparent);
 }
-.node-feat .node-label {
+.node-feat .node-bonus {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 2px;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.node-spec .node-bonus,
+.node-spec .node-label {
+  transform: rotate(-45deg);
+}
+.node-spec .node-label {
+
   font-size: 10px;
 }
 
@@ -192,7 +315,21 @@ body {
   box-shadow: 0 0 16px color-mix(in srgb, var(--zc) 55%, transparent);
 }
 
-.node-secret .node-label {
+.node-secret .node-bonus {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 2px;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.node-spec .node-bonus,
+.node-spec .node-label {
+  transform: rotate(-45deg);
+}
+.node-spec .node-label {
+
   font-size: 26px;
   color: var(--muted);
 }
@@ -221,6 +358,90 @@ body {
   }
 }
 
+
+/* React Flow: тултипы поверх соседних узлов */
+.react-flow__node {
+  overflow: visible !important;
+}
+.react-flow__node .node {
+  overflow: visible;
+}
+.status-locked {
+  opacity: 0.38;
+}
+.status-locked .node-label {
+  font-size: 9px;
+}
+.node:hover {
+  z-index: 5000 !important;
+}
+.node .tooltip {
+  z-index: 5001;
+  bottom: calc(100% + 12px);
+  max-height: min(280px, 40vh);
+  overflow-y: auto;
+}
+.node-spec:hover .tooltip,
+.node-feat:hover .tooltip {
+  width: 260px;
+}
+
+/* Фон секторов древа */
+.tree-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.tree-zone-legend {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  pointer-events: none;
+}
+.tree-zone-legend span {
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(11, 14, 20, 0.75);
+}
+.legend-magic { color: var(--z-magic); }
+.legend-strength { color: var(--z-strength); }
+.legend-dexterity { color: var(--z-dexterity); }
+.legend-wisdom { color: var(--z-wisdom); }
+
+/* Черты vs ремесла vs навыки */
+.node-feat {
+  border-radius: 10px;
+  border-width: 2px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+.node-featslot {
+  width: 72px;
+  height: 72px;
+  width: 72px;
+  height: 72px;
+  border-color: #fbbf24 !important;
+  background: color-mix(in srgb, #fbbf24 18%, var(--panel-2)) !important;
+}
+.node-craftslot {
+  width: 72px;
+  height: 72px;
+  width: 72px;
+  height: 72px;
+  border-color: #a78bfa !important;
+  background: color-mix(in srgb, #a78bfa 18%, var(--panel-2)) !important;
+}
+.node-bridge {
+  border-style: dashed;
+  width: 62px;
+  height: 62px;
+}
+
 /* ── Tooltip ────────────────────────────────────────── */
 .tooltip {
   position: absolute;
@@ -239,7 +460,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
-  z-index: 50;
+  z-index: 5001;
 }
 .node:hover .tooltip {
   opacity: 1;
@@ -280,13 +501,40 @@ body {
 .sidebar {
   width: 300px;
   min-width: 300px;
+  min-height: 0;
+  height: 100%;
+  flex-shrink: 0;
   background: var(--panel);
   border-right: 1px solid var(--border);
-  padding: 16px;
-  overflow-y: auto;
+  padding: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+}
+.sidebar-scroll > * + * {
+  margin-top: 14px;
+}
+.sidebar-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+  display: block;
+}
+.sidebar-footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+.sidebar-footer .btn {
+  flex: 1;
 }
 .sidebar-title {
   font-size: 18px;
@@ -423,6 +671,7 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
+  background: transparent;
 }
 /* Хэндлы связей видны только в режиме редактора. */
 .react-flow__handle {
@@ -1075,10 +1324,36 @@ body {
     width: 100%;
     min-width: 0;
     max-height: 42vh;
+    height: auto;
     border-right: none;
     border-bottom: 1px solid var(--border);
   }
-  .canvas {
+  
+/* Древо: фон экрана фиксирован — не ездит при pan/zoom */
+.canvas-tree {
+  position: relative;
+  background: radial-gradient(circle at 50% 48%, #0e1219 0%, #070a0f 78%) !important;
+}
+.canvas-tree::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.55;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--z-magic) 7%, transparent) 0 25%, transparent 25%),
+    linear-gradient(225deg, color-mix(in srgb, var(--z-strength) 7%, transparent) 0 25%, transparent 25%),
+    linear-gradient(45deg, color-mix(in srgb, var(--z-dexterity) 7%, transparent) 0 25%, transparent 25%),
+    linear-gradient(315deg, color-mix(in srgb, var(--z-wisdom) 7%, transparent) 0 25%, transparent 25%);
+}
+.canvas-tree .tree-canvas-wrap,
+.canvas-tree .rf-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+.canvas {
     flex: 1;
   }
 }
@@ -1693,7 +1968,7 @@ body {
 /* ── Сворачиваемые секции сайдбара ── */
 .sidebar-section {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 .sidebar-section-head {
   width: 100%;
@@ -1789,7 +2064,7 @@ body {
 /* ── Сворачиваемые секции сайдбара ── */
 .sidebar-section {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 .sidebar-section-head {
   width: 100%;
@@ -1881,3 +2156,116 @@ body {
   font-size: 0.75rem;
   margin-top: 0.15rem;
 }
+
+
+/* PoE highways: toolbar, tiers, route highlight */
+.tree-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+}
+.tree-toolbar button {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.tree-toolbar button:hover:not(:disabled) {
+  border-color: #64748b;
+}
+.tree-toolbar button.active {
+  background: #1e3a5f;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+.tree-toolbar button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.node-tier-small {
+  width: 58px;
+  height: 58px;
+}
+.node-tier-medium {
+  width: 76px;
+  height: 76px;
+}
+.node-tier-large {
+  width: 94px;
+  height: 94px;
+}
+.node-tier-large.node-keystone {
+  border-radius: 4px;
+  clip-path: polygon(50% 0%, 92% 25%, 92% 75%, 50% 100%, 8% 75%, 8% 25%);
+}
+.node-dimmed {
+  opacity: 0.2 !important;
+  filter: grayscale(0.55);
+  pointer-events: none;
+}
+.node-route {
+  box-shadow:
+    0 0 0 3px rgba(250, 204, 21, 0.9),
+    0 0 20px rgba(250, 204, 21, 0.45);
+  z-index: 15;
+}
+.react-flow__edge.edge-route path {
+  stroke: #facc15 !important;
+  stroke-width: 3.5 !important;
+  filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.55));
+}
+.react-flow__edge.edge-dimmed path {
+  opacity: 0.08;
+}
+.react-flow__edge.edge-idle path {
+  transition: opacity 0.12s ease, stroke-width 0.12s ease;
+}
+.react-flow__edge.edge-linked path {
+  opacity: 1 !important;
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 3px rgba(148, 163, 184, 0.35));
+}
+
+.sheet-abilities-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.sheet-abilities-scroll {
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.abilities-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.abilities-table th,
+.abilities-table td {
+  border: 1px solid var(--border);
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+.abilities-table th {
+  background: var(--panel-2);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.abilities-table .ab-name { font-weight: 700; white-space: nowrap; }
+.abilities-table .ab-cost { white-space: nowrap; color: #86efac; }
+.abilities-table .ab-note { color: var(--muted); max-width: 280px; }

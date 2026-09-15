@@ -1,61 +1,33 @@
 import {
   BaseEdge,
-  getSmoothStepPath,
+  getStraightPath,
   useInternalNode,
-  Position,
   type EdgeProps,
   type InternalNode,
   type Node,
 } from '@xyflow/react';
 
-function nodeIntersection(a: InternalNode<Node>, b: InternalNode<Node>) {
-  const w = (a.measured.width ?? 0) / 2;
-  const h = (a.measured.height ?? 0) / 2;
-  const ap = a.internals.positionAbsolute;
-  const bp = b.internals.positionAbsolute;
-  const x2 = ap.x + w;
-  const y2 = ap.y + h;
-  const x1 = bp.x + (b.measured.width ?? 0) / 2;
-  const y1 = bp.y + (b.measured.height ?? 0) / 2;
-  const xx1 = (x1 - x2) / (2 * w) - (y1 - y2) / (2 * h);
-  const yy1 = (x1 - x2) / (2 * w) + (y1 - y2) / (2 * h);
-  const a1 = 1 / (Math.abs(xx1) + Math.abs(yy1) || 1);
-  const xx3 = a1 * xx1;
-  const yy3 = a1 * yy1;
-  return { x: w * (xx3 + yy3) + x2, y: h * (-xx3 + yy3) + y2 };
+function nodeCenter(n: InternalNode<Node>) {
+  return {
+    x: n.internals.positionAbsolute.x + (n.measured.width ?? 0) / 2,
+    y: n.internals.positionAbsolute.y + (n.measured.height ?? 0) / 2,
+  };
 }
 
-function edgeSide(node: InternalNode<Node>, point: { x: number; y: number }) {
-  const nx = Math.round(node.internals.positionAbsolute.x);
-  const ny = Math.round(node.internals.positionAbsolute.y);
-  const px = Math.round(point.x);
-  const py = Math.round(point.y);
-  const w = node.measured.width ?? 0;
-  const h = node.measured.height ?? 0;
-  if (px <= nx + 1) return Position.Left;
-  if (px >= nx + w - 1) return Position.Right;
-  if (py <= ny + 1) return Position.Top;
-  if (py >= ny + h - 1) return Position.Bottom;
-  return Position.Top;
-}
-
-/** Ровные «шоссе» как в PoE — smoothstep без плавных дуг. */
+/** Прямые шоссе по путям — как на эталонном фото, без ломаных smoothstep. */
 export function TreeFloatingEdge({ id, source, target, style, markerEnd }: EdgeProps) {
   const s = useInternalNode(source);
   const t = useInternalNode(target);
   if (!s || !t) return null;
 
-  const sp = nodeIntersection(s, t);
-  const tp = nodeIntersection(t, s);
-  const [path] = getSmoothStepPath({
+  const sp = nodeCenter(s);
+  const tp = nodeCenter(t);
+  const [path] = getStraightPath({
     sourceX: sp.x,
     sourceY: sp.y,
     targetX: tp.x,
     targetY: tp.y,
-    sourcePosition: edgeSide(s, sp),
-    targetPosition: edgeSide(t, tp),
-    borderRadius: 0,
   });
 
-  return <BaseEdge id={id} path={path} style={{ ...style, strokeLinecap: 'square' }} markerEnd={markerEnd} />;
+  return <BaseEdge id={id} path={path} style={{ ...style, strokeLinecap: 'round' }} markerEnd={markerEnd} />;
 }
