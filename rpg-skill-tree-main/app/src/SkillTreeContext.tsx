@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -11,11 +12,11 @@ import type { SkillNode, SkillTreeData, SkillTreeState, ZoneType } from './types
 import type { PlaytestPreset } from './playtestPresets';
 import { migrateLegacyPoints } from './types';
 import { initialSkillTree } from './skillTreeData';
-import { TREE_BUILD } from './buildInfo';
 import { blockReason } from './nodeStatus';
 import { raceById } from './races';
 import { backgroundById } from './backgrounds';
 import { TREE_ECONOMY } from './treeEconomy';
+import { buildRouteNodeSet, type TreeFocus } from './treeView';
 import {
   computeFatigueMax,
   computeKB,
@@ -25,7 +26,7 @@ import {
 } from './coreRules';
 
 const LS_STATE = 'teomor_skill_tree_state_v4';
-const LS_DATA = 'teomor_skill_tree_data_v8';
+const LS_DATA = 'teomor_skill_tree_data_v15';
 
 
 const defaultState: SkillTreeState = {
@@ -293,6 +294,12 @@ interface SkillTreeContextValue {
   dispatch: React.Dispatch<Action>;
   totalStatModifiers: Record<string, number>;
   kb: number;
+  treeFocus: TreeFocus;
+  setTreeFocus: (focus: TreeFocus) => void;
+  showRouteHighlight: boolean;
+  setShowRouteHighlight: (show: boolean) => void;
+  routeHighlight: Set<string>;
+  highlightRoute: (allocatedIds: string[]) => void;
 }
 
 const SkillTreeContext = createContext<SkillTreeContextValue | undefined>(
@@ -341,16 +348,8 @@ function loadState(): SkillTreeState {
 
 function loadTree(): SkillTreeData {
   try {
-    // Сброс устаревшего древа из localStorage после обновления билда
-    for (const legacy of ['teomor_skill_tree_data_v6', 'teomor_skill_tree_data_v5', 'teomor_skill_tree_data_v4']) {
-      localStorage.removeItem(legacy);
-    }
-    const build = localStorage.getItem('teomor_tree_build');
     const raw = localStorage.getItem(LS_DATA);
-    if (!raw || build !== TREE_BUILD) {
-      localStorage.setItem('teomor_tree_build', TREE_BUILD);
-      return initialSkillTree;
-    }
+    if (!raw) return initialSkillTree;
     const parsed = JSON.parse(raw) as SkillTreeData;
     if (parsed?.nodes && parsed?.edges) {
       return {
@@ -419,6 +418,16 @@ function computeTotals(
 export function SkillTreeProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
   const [treeData, setTreeData] = useState<SkillTreeData>(loadTree);
+  const [treeFocus, setTreeFocus] = useState<TreeFocus>('all');
+  const [showRouteHighlight, setShowRouteHighlight] = useState(false);
+  const [routeHighlight, setRouteHighlight] = useState<Set<string>>(() => new Set());
+
+  const highlightRoute = useCallback(
+    (allocatedIds: string[]) => {
+      setRouteHighlight(buildRouteNodeSet(allocatedIds, treeData));
+    },
+    [treeData],
+  );
 
   const totalStatModifiers = useMemo(
     () => computeTotals(state, treeData),
@@ -454,7 +463,20 @@ export function SkillTreeProvider({ children }: { children: ReactNode }) {
 
   return (
     <SkillTreeContext.Provider
-      value={{ state, treeData, setTreeData, dispatch, totalStatModifiers, kb }}
+      value={{
+        state,
+        treeData,
+        setTreeData,
+        dispatch,
+        totalStatModifiers,
+        kb,
+        treeFocus,
+        setTreeFocus,
+        showRouteHighlight,
+        setShowRouteHighlight,
+        routeHighlight,
+        highlightRoute,
+      }}
     >
       {children}
     </SkillTreeContext.Provider>

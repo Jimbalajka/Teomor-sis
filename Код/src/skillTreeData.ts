@@ -232,7 +232,7 @@ fork('feat_meta_distant', -920, 440, 'Дальняя магия', 'wisdom', 'fea
 
  // ── Слоты ЧЕРТ (слева): 1 покупка за 4 уровня, попап выбора черты ──
  ...['feat_slot_1', 'feat_slot_2', 'feat_slot_3'].map((id, i): SkillNode => ({
- id, x: -1080, y: -160 + i * 160, label: 'Черта', zone: 'center', category: 'feat_slot',
+ id, x: -2100, y: -320 + i * 320, label: 'Черта', zone: 'center', category: 'feat_slot',
  cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] },
  description: 'Слот Черты. Доступен раз в 4 уровня. Открывает выбор черты.',
  choices: [{
@@ -249,7 +249,7 @@ fork('feat_meta_distant', -920, 440, 'Дальняя магия', 'wisdom', 'fea
 
  // ── Слоты РЕМЁСЕЛ/ВЛАДЕНИЙ (справа): попап выбора ремесла ──
  ...['craft_slot_1', 'craft_slot_2', 'craft_slot_3'].map((id, i): SkillNode => ({
- id, x: 1080, y: -160 + i * 160, label: 'Ремесло', zone: 'center', category: 'craft_slot',
+ id, x: 2100, y: -320 + i * 320, label: 'Ремесло', zone: 'center', category: 'craft_slot',
  cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] },
  description: 'Слот Ремесла/владения. Доступен раз в 4 уровня. Открывает выбор ремесла.',
  choices: [{
