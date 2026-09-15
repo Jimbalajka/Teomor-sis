@@ -2228,7 +2228,15 @@ body {
   filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.55));
 }
 .react-flow__edge.edge-dimmed path {
-  opacity: 0.12;
+  opacity: 0.08;
+}
+.react-flow__edge.edge-idle path {
+  transition: opacity 0.12s ease, stroke-width 0.12s ease;
+}
+.react-flow__edge.edge-linked path {
+  opacity: 1 !important;
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 3px rgba(148, 163, 184, 0.35));
 }
 
 .sheet-abilities-title {

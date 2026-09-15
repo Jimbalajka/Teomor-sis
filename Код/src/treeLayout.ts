@@ -9,13 +9,13 @@ const ZONE_ANGLE: Record<Exclude<ZoneType, 'center'>, number> = {
   wisdom: 135 * DEG,
 };
 
-const R_SPEC = 520;
-const R_SCHOOL = 980;
-const R_CENTER = 200;
-const HIGHWAY_STEP = 200;
-const PROF_ALONG = 150;
-const PROF_PERP = 150;
-const PERP_TIGHT = 90;
+const R_SPEC = 560;
+const R_SCHOOL = 1180;
+const R_CENTER = 220;
+const HIGHWAY_STEP = 230;
+const PROF_ALONG = 170;
+const PROF_PERP = 70;
+const PERP_TIGHT = 36;
 
 function polar(r: number, angle: number) {
   return { x: Math.round(Math.cos(angle) * r), y: Math.round(Math.sin(angle) * r) };
@@ -173,7 +173,7 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
       .filter((n) => n.zone === zone && n.category === 'subcategory')
       .sort((a, b) => a.id.localeCompare(b.id));
     const base = ZONE_ANGLE[zone];
-    const spread = Math.min(32 * DEG, (68 * DEG) / Math.max(schools.length, 1));
+    const spread = Math.min(20 * DEG, (72 * DEG) / Math.max(schools.length, 1));
     schools.forEach((s, i) => {
       const a = base + (i - (schools.length - 1) / 2) * spread;
       pos.set(s.id, polar(R_SCHOOL, a));
@@ -265,7 +265,7 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
     const count = siblings.length;
 
     if (parent?.exclusiveGroup?.startsWith('prof_')) {
-      const arcSpan = Math.min(28 * DEG, Math.max(10 * DEG, count * 5 * DEG));
+      const arcSpan = Math.min(14 * DEG, Math.max(6 * DEG, count * 3 * DEG));
       const aOff = count <= 1 ? 0 : (idx - (count - 1) / 2) * (arcSpan / (count - 1));
       const childAngle = parentAngle + aOff;
       const step = n.category === 'feat' ? HIGHWAY_STEP * 0.82 : HIGHWAY_STEP * 0.72;
@@ -275,7 +275,7 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
       continue;
     }
 
-    const arcSpan = Math.min(36 * DEG, Math.max(12 * DEG, count * 5 * DEG));
+    const arcSpan = Math.min(16 * DEG, Math.max(6 * DEG, count * 3 * DEG));
     const aOff = count <= 1 ? 0 : (idx - (count - 1) / 2) * (arcSpan / (count - 1));
     const childAngle = parentAngle + aOff;
     const step = n.category === 'feat' ? HIGHWAY_STEP * 0.75 : HIGHWAY_STEP * 0.65;

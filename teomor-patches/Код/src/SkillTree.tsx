@@ -54,6 +54,7 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showRaceModal, setShowRaceModal] = useState(false);
   const [choiceNode, setChoiceNode] = useState<SkillNode | null>(null);
+  const [hoverNodeId, setHoverNodeId] = useState<string | null>(null);
 
   // Пересеять узлы, когда меняется структура древа (правка/импорт/сброс).
   useEffect(() => {
@@ -70,23 +71,51 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         const onRoute =
           showRouteHighlight && isEdgeOnRoute(e.from, e.to, routeHighlight);
         const dimRoute = showRouteHighlight && routeHighlight.size > 0 && !onRoute;
+        const linked =
+          !!hoverNodeId && (e.from === hoverNodeId || e.to === hoverNodeId);
         return {
           id: `${e.from}-${e.to}`,
           source: e.from,
           target: e.to,
           type: 'floating',
-          animated: !showRouteHighlight && targetStatus === 'available',
-          className: onRoute ? 'edge-route' : dimRoute ? 'edge-dimmed' : undefined,
+          animated: false,
+          className: onRoute
+            ? 'edge-route'
+            : linked
+              ? 'edge-linked'
+              : dimRoute
+                ? 'edge-dimmed'
+                : 'edge-idle',
           style: {
-            stroke: onRoute ? '#facc15' : targetUnlocked ? color : '#4b5563',
-            strokeWidth: onRoute ? 3.5 : targetUnlocked ? 2.5 : 1,
-            strokeDasharray: targetUnlocked || onRoute ? undefined : '6 6',
-            opacity: dimRoute ? 0.12 : 1,
+            stroke: onRoute
+              ? '#facc15'
+              : linked
+                ? color
+                : targetUnlocked
+                  ? color
+                  : targetStatus === 'available'
+                    ? color
+                    : '#64748b',
+            strokeWidth: onRoute ? 3.5 : linked ? 3 : targetUnlocked ? 2 : 1.25,
+            opacity: dimRoute
+              ? 0.08
+              : linked || onRoute
+                ? 1
+                : targetUnlocked
+                  ? 0.55
+                  : 0.18,
           },
         };
       }),
-    [treeData, state, showRouteHighlight, routeHighlight],
+    [treeData, state, showRouteHighlight, routeHighlight, hoverNodeId],
   );
+
+  const onNodeMouseEnter = useCallback((_: unknown, rfNode: Node) => {
+    setHoverNodeId(rfNode.id);
+  }, []);
+  const onNodeMouseLeave = useCallback(() => {
+    setHoverNodeId(null);
+  }, []);
 
   const onNodeClick = useCallback(
     (_: unknown, rfNode: Node) => {
@@ -182,6 +211,8 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onNodeClick={onNodeClick}
+        onNodeMouseEnter={onNodeMouseEnter}
+        onNodeMouseLeave={onNodeMouseLeave}
         onNodeDragStop={onNodeDragStop}
         onConnect={onConnect}
         nodesDraggable={editMode}
