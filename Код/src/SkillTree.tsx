@@ -12,6 +12,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useSkillTree } from './SkillTreeContext';
 import { CustomSkillNode } from './CustomSkillNode';
+import { ClusterFrameNode } from './ClusterFrameNode';
 import { TreeFloatingEdge } from './TreeEdge';
 import { EditorPanel } from './EditorPanel';
 import { RaceModal } from './RaceModal';
@@ -19,9 +20,13 @@ import { ChoiceModal } from './ChoiceModal';
 import { getNodeStatus } from './nodeStatus';
 import { SkillTreeToolbar } from './SkillTreeToolbar';
 import { isEdgeOnRoute } from './treeView';
+import { getClusterFrames } from './treeLayout';
 import type { SkillNode, SkillTreeData, ZoneType } from './types';
 
-const nodeTypes = { skill: CustomSkillNode };
+const nodeTypes = {
+  skill: CustomSkillNode,
+  clusterFrame: ClusterFrameNode,
+};
 const edgeTypes = { floating: TreeFloatingEdge };
 
 const zoneEdgeColor: Record<ZoneType, string> = {
@@ -33,12 +38,29 @@ const zoneEdgeColor: Record<ZoneType, string> = {
 };
 
 function buildNodes(treeData: SkillTreeData): Node[] {
-  return treeData.nodes.map((n) => ({
+  const frames = getClusterFrames().map((f) => ({
+    id: f.id,
+    type: 'clusterFrame' as const,
+    position: { x: f.cx - f.r, y: f.cy - f.r },
+    data: {
+      kind: f.kind,
+      r: f.r,
+      zone: f.zone,
+      label: f.label,
+    },
+    draggable: false,
+    selectable: false,
+    focusable: false,
+    zIndex: -2,
+  }));
+  const skills = treeData.nodes.map((n) => ({
     id: n.id,
-    type: 'skill',
+    type: 'skill' as const,
     position: { x: n.x, y: n.y },
     data: { node: n },
+    zIndex: 1,
   }));
+  return [...frames, ...skills];
 }
 
 export function SkillTree({ editMode }: { editMode: boolean }) {

@@ -2329,3 +2329,40 @@ body {
 .abilities-table .ab-name { font-weight: 700; white-space: nowrap; }
 .abilities-table .ab-cost { white-space: nowrap; color: #86efac; }
 .abilities-table .ab-note { color: var(--muted); max-width: 280px; }
+
+/* ── Видимые рамки гекс/ромб (кластеры профессий) ── */
+.cluster-frame {
+  position: relative;
+  pointer-events: none !important;
+  z-index: 0;
+}
+.cluster-frame-svg {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 0 10px rgba(148, 163, 184, 0.18));
+}
+.cluster-frame-hex .cluster-frame-svg polygon:first-child {
+  stroke-opacity: 0.85;
+}
+.cluster-frame-diamond .cluster-frame-svg polygon {
+  stroke-opacity: 0.75;
+}
+.cluster-frame-label {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  opacity: 0.55;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow: 0 1px 2px #000;
+}
+.react-flow__node-clusterFrame {
+  pointer-events: none !important;
+  z-index: -2 !important;
+}

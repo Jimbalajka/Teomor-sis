@@ -6,14 +6,33 @@ import type { SkillNode, ZoneType } from './types';
  * - профессия = центр гексагона, вокруг общие навыки ветки
  * - углубление = ромб/малый кластер рядом с гексом
  * - длинные цепочки (колдовство и т.п.) сворачиваются в хабы
+ * - видимые SVG-рамки гекс/ромб (ClusterFrameNode)
  */
 const CELL = 150;
 const GAP = CELL * 3;
 const SCHOOL_GAP = CELL * 9; // между школами в квадранте — место под гексы
-const HEX_R = CELL * 1.35; // радиус кольца вокруг профессии
-const HUB_GAP = CELL * 4.2; // между профессиями-хабами одной школы
-const DEEP_R = CELL * 1.2; // ромб углубления
+const HEX_R = CELL * 1.75; // радиус кольца / видимого гекса
+const HUB_GAP = CELL * 5.2; // между профессиями-хабами одной школы
+const DEEP_R = CELL * 1.35; // ромб углубления
 
+export type ClusterFrameSpec = {
+  id: string;
+  kind: 'hex' | 'diamond';
+  cx: number;
+  cy: number;
+  r: number;
+  zone: ZoneType;
+  label?: string;
+  /** id узлов, вокруг которых держим рамку (после relax — пересчитать cx/cy) */
+  anchorIds: string[];
+};
+
+let lastClusterFrames: ClusterFrameSpec[] = [];
+
+/** Рамки последнего layout — SkillTree рисует их как node type clusterFrame. */
+export function getClusterFrames(): ClusterFrameSpec[] {
+  return lastClusterFrames;
+}
 type BoardZone = Exclude<ZoneType, 'center'>;
 
 function zoneOrigin(zone: BoardZone): { x: number; y: number } {
@@ -44,11 +63,13 @@ function zonePoint(zone: BoardZone, out: number, along: number): { x: number; y:
   }
 }
 
-function hexOffset(i: number, n: number, r: number): { x: number; y: number } {
-  // равномерно по кругу (гекс = 6; если больше — плотное кольцо)
-  const slots = Math.max(n, 6);
-  const a = -Math.PI / 2 + (i * 2 * Math.PI) / slots;
-  return { x: Math.round(Math.cos(a) * r), y: Math.round(Math.sin(a) * r) };
+/** Узлы строго на вершинах гекса (pointy-top); >6 → второе кольцо. */
+function hexOffset(i: number, _n: number, r: number): { x: number; y: number } {
+  const ring = Math.floor(i / 6);
+  const slot = i % 6;
+  const rr = r * (1 + ring * 0.9);
+  const a = -Math.PI / 2 + slot * (Math.PI / 3);
+  return { x: Math.round(Math.cos(a) * rr), y: Math.round(Math.sin(a) * rr) };
 }
 
 function diamondOffset(i: number, n: number, r: number): { x: number; y: number } {
@@ -144,6 +165,7 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
   const nodes = source.map((n) => ({ ...n }));
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const pos = new Map<string, { x: number; y: number }>();
+  const draftFrames: ClusterFrameSpec[] = [];
 
   const put = (id: string, x: number, y: number) => {
     pos.set(id, { x: Math.round(x / 20) * 20, y: Math.round(y / 20) * 20 });
@@ -201,25 +223,9 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
       const schoolDirect = (childrenOf.get(school.id) ?? []).filter(
         (c) => !c.exclusiveGroup?.startsWith('prof_'),
       );
-      // профессии этой школы
-      const profs = (childrenOf.get(school.id) ?? []).filter((c) =>
-        c.exclusiveGroup?.startsWith('prof_'),
-      );
-      // также prof_ через промежуточный transit (аристократ: ts → prof)
-      const nestedProfs: SkillNode[] = [];
-      for (const mid of schoolDirect) {
-        for (const c of childrenOf.get(mid.id) ?? []) {
-          if (c.exclusiveGroup?.startsWith('prof_') || c.exclusiveGroup?.startsWith('fork_')) {
-            // fork_arist сидит на mid; сами prof_* — хабы
-            if (c.exclusiveGroup.startsWith('prof_') || c.id.startsWith('prof_') || c.id.startsWith('st_')) {
-              if (c.exclusiveGroup?.startsWith('prof_') || c.exclusiveGroup?.startsWith('fork_')) {
-                nestedProfs.push(c);
-              }
-            }
-          }
-        }
-      }
-      // точнее: все потомки с exclusiveGroup prof_* или (fork_* и category transit)
+      // профессии этой школы (прямые + через mid + fork_arist и т.п.)
+      // см. allProfs ниже — единый фильтр по resolveSchoolId
+
       const allProfs = nodes.filter((n) => {
         if (n.zone !== zone) return false;
         if (resolveSchoolId(n, byId, schoolCache) !== school.id) return false;
@@ -240,9 +246,21 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
         (c) => !allProfs.some((p) => p.id === c.id) && !pos.has(c.id),
       );
       schoolRing.forEach((c, i) => {
-        const off = hexOffset(i, Math.max(schoolRing.length, 3), HEX_R * 0.85);
+        const off = hexOffset(i, schoolRing.length, HEX_R * 0.85);
         put(c.id, sp.x + off.x, sp.y + off.y);
       });
+      if (schoolRing.length > 0) {
+        draftFrames.push({
+          id: `hex_school_${school.id}`,
+          kind: 'hex',
+          cx: sp.x,
+          cy: sp.y,
+          r: Math.round(HEX_R * 0.85 + 55),
+          zone,
+          label: school.label,
+          anchorIds: [school.id, ...schoolRing.map((c) => c.id)],
+        });
+      }
 
       // хабы профессий — компактный ряд/дуга рядом со школой
       const hubs = allProfs.sort((a, b) => a.id.localeCompare(b.id));
@@ -251,7 +269,7 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
         const row = Math.floor(hi / cols);
         const col = hi % cols;
         const hubAlong = along0 + (col - (cols - 1) / 2) * HUB_GAP;
-        const hubOut = CELL * 2 + HEX_R * 2.2 + row * (HEX_R * 2.6);
+        const hubOut = CELL * 2 + HEX_R * 2.4 + row * (HEX_R * 3.0);
         const hp = zonePoint(zone, hubOut, hubAlong);
         put(hub.id, hp.x, hp.y);
 
@@ -269,24 +287,32 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
           }
         }
 
-        // гекс вокруг профессии
+        // гекс вокруг профессии — узлы на вершинах
         ringNodes.sort((a, b) => a.id.localeCompare(b.id));
         ringNodes.forEach((d, i) => {
-          const off = hexOffset(i, Math.max(ringNodes.length, 6), HEX_R);
+          const off = hexOffset(i, ringNodes.length, HEX_R);
           put(d.id, hp.x + off.x, hp.y + off.y);
+        });
+        draftFrames.push({
+          id: `hex_${hub.id}`,
+          kind: 'hex',
+          cx: hp.x,
+          cy: hp.y,
+          r: Math.round(HEX_R + 60),
+          zone,
+          label: hub.label,
+          anchorIds: [hub.id, ...ringNodes.map((d) => d.id)],
         });
 
         // ромбы углублений — снаружи гекса
         let di = 0;
-        for (const [, members] of [...deepGroups.entries()].sort((a, b) =>
+        for (const [gName, members] of [...deepGroups.entries()].sort((a, b) =>
           a[0].localeCompare(b[0]),
         )) {
           members.sort((a, b) => a.id.localeCompare(b.id));
           const a = -Math.PI / 2 + di * ((2 * Math.PI) / Math.max(deepGroups.size, 1));
-          const cx = hp.x + Math.round(Math.cos(a) * (HEX_R * 3.0));
-          const cy = hp.y + Math.round(Math.sin(a) * (HEX_R * 3.0));
-          // центр ромба можно оставить пустым — члены на углах;
-          // если один член — он в центре ромба
+          const cx = hp.x + Math.round(Math.cos(a) * (HEX_R * 3.2));
+          const cy = hp.y + Math.round(Math.sin(a) * (HEX_R * 3.2));
           if (members.length === 1) {
             put(members[0].id, cx, cy);
           } else {
@@ -295,6 +321,15 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
               put(m.id, cx + off.x, cy + off.y);
             });
           }
+          draftFrames.push({
+            id: `dia_${hub.id}_${gName}`,
+            kind: 'diamond',
+            cx,
+            cy,
+            r: Math.round(DEEP_R + 50),
+            zone,
+            anchorIds: members.map((m) => m.id),
+          });
           di++;
         }
       });
@@ -412,6 +447,21 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
       }
     }
   }
+
+  // Рамки после relax — центр по якорям (профессия / члены ромба)
+  const byFinal = new Map(out.map((n) => [n.id, n]));
+  lastClusterFrames = draftFrames.map((f) => {
+    const anchors = f.anchorIds.map((id) => byFinal.get(id)).filter(Boolean) as SkillNode[];
+    if (!anchors.length) return f;
+    if (f.kind === 'hex') {
+      // центр гекса = хаб (первый якорь) если есть, иначе среднее
+      const hub = byFinal.get(f.anchorIds[0]) ?? anchors[0];
+      return { ...f, cx: hub.x, cy: hub.y };
+    }
+    const cx = Math.round(anchors.reduce((s, n) => s + n.x, 0) / anchors.length);
+    const cy = Math.round(anchors.reduce((s, n) => s + n.y, 0) / anchors.length);
+    return { ...f, cx, cy };
+  });
 
   return out;
 }
