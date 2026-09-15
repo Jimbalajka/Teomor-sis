@@ -123,14 +123,14 @@
 - Не трогать пресеты пока не готова ветка
 
 ## Changelog
-- 2026-09-15: fork logic по эталону путей (placeExclusiveFork для всех exclusiveGroup); центр-компас; LS v17; PR #31
+- 2026-09-15: fork logic по эталону путей (placeExclusiveFork для всех exclusiveGroup); центр-компас; LS v17; PR #34
 - 2026-09-15: restore UI (treeFocus/route) + denser highway spacing; slots вне веток; LS v15; live https://teomor.acheaches.unstoppable-ai.site/0a95a994-teomor/
 - 2026-09-15: сетка древа — `treeLayout.ts` (CELL 160), pack без наложений; слоты Черт/Ремёсел вынесены; дубли addRoad убраны; LS_DATA v9
 - 2026-03-28: green + amber + PR (all branches complete)
 - 2026-03-28: general branch + exclusiveGroup + magic/red rework (D&D/PoE forks)
 - 2026-03-28: файл создан
-- 2026-09-11: режим «Боту 3» в AGENT-CONTEXT; PR #31; CORE.md SoT
+- 2026-09-11: режим «Боту 3» в AGENT-CONTEXT; PR #34; CORE.md SoT
 
 
 ## Текущий PR
-- **#31** https://github.com/Jimbalajka/Teomor-sis/pull/31 — `feat/tree-visible-hex-frames` → `main`
+- **#31** https://github.com/Jimbalajka/Teomor-sis/pull/31 — `feat/tree-poe-compact-no-frames` → `main`
