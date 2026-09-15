@@ -46,8 +46,8 @@
 - PR: `Jimbalajka/Teomor-sis`, токен в `.env`, не спрашивать.
 
 ### Текущее состояние (обновлять!)
-- **PR:** https://github.com/Jimbalajka/Teomor-sis/pull/23 (`feat/tree-highway-spacing` → `main`)
-- **Локальная ветка agent:** `feat/tree-highway-spacing`
+- **PR:** https://github.com/Jimbalajka/Teomor-sis/pull/24 (`feat/tree-quiet-edges-hover` → `main`)
+- **Локальная ветка agent:** `feat/tree-quiet-edges-hover`
 - **Канон кода:** `teomor-patches/Код/` → mirror `day1-bundle/app/src/`
 
 ## Git / push
@@ -58,7 +58,7 @@
 - **Канон:** `Код/` (npm run dev) + mirror `teomor-patches/day1-bundle/app/src/`
 
 ## Текущий PR
-- **#23** https://github.com/Jimbalajka/Teomor-sis/pull/23 — `feat/tree-highway-spacing` → `main`
+- **#24** https://github.com/Jimbalajka/Teomor-sis/pull/24 — `feat/tree-quiet-edges-hover` → `main`
 
 ## Приоритет работ (сейчас)
 1. **Плейтест 3 перс.** — обновить пресеты под новые ID
@@ -104,8 +104,8 @@
 - `feat_witch_oracle` (witch + psionics)
 
 ## Не делать
-- **Всегда новый PR** на пачку правок — не тыкать в уже смерженный (#20 и старше)
-- **Всегда новый PR** на пачку правок — не тыкать в уже смерженный (#20 и старше)
+- **Всегда новый PR** на каждую пачку правок. Не дописывать в открытый PR и не тыкать в смерженный.
+- **Всегда новый PR** на каждую пачку правок. Не дописывать в открытый PR и не тыкать в смерженный.
 - Не менять архитектуру UI/CSS без запроса
 - Не добавлять banner/verify/buildInfo слои
 - Не менять архитектуру UI/CSS без запроса
