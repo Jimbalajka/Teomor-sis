@@ -8,6 +8,31 @@ import { isNodeDimmed } from './treeView';
 
 export type SkillNodeData = { node: SkillNode };
 
+/** Легенда эталона путей: синий=путь, серый=общие, чёрный=профы/углубления. */
+export function nodeLegendRole(node: SkillNode): 'path' | 'common' | 'prof' | 'other' {
+  if (node.category === 'root' || node.category === 'specialization') return 'other';
+  if (node.category === 'feat_slot' || node.category === 'craft_slot') return 'other';
+  // серый центр — общие навыки
+  if (
+    node.zone === 'center' &&
+    node.category === 'transit_general' &&
+    !node.exclusiveGroup
+  ) {
+    return 'common';
+  }
+  // синий путь: школа, навыки ствола, дороги, выбранные пути (Тело/Разум/Мастер)
+  if (node.category === 'subcategory') return 'path';
+  if (node.id.startsWith('road_')) return 'path';
+  if (node.exclusiveGroup === 'general_path') return 'path';
+  if (node.category === 'transit_specialized' && !node.exclusiveGroup) return 'path';
+  if (node.category === 'transit_general' && node.id.startsWith('g_path')) return 'path';
+  if (node.id === 'g_hub') return 'path'; // фундамент → развилка путей
+  // чёрные — профессии, стили, углубления
+  if (node.exclusiveGroup || node.category === 'feat') return 'prof';
+  return 'other';
+}
+
+
 export function CustomSkillNode({ data }: NodeProps) {
   const { node } = data as unknown as SkillNodeData;
   const {
@@ -31,6 +56,8 @@ export function CustomSkillNode({ data }: NodeProps) {
       ? state.specializationLevels[node.zone] ?? 0
       : undefined;
 
+  const legend = nodeLegendRole(node);
+
   const isKeystone =
     node.description?.includes('Оплот') ||
     (node.category === 'feat' && !!node.exclusiveGroup && tier === 'large');
@@ -52,6 +79,9 @@ export function CustomSkillNode({ data }: NodeProps) {
           'node-transit',
         node.id.startsWith('bridge_') && 'node-bridge',
         isKeystone && 'node-keystone',
+        legend === 'path' && 'node-path',
+        legend === 'common' && 'node-common',
+        legend === 'prof' && 'node-prof',
         hidden && 'node-secret',
         dimmed && 'node-dimmed',
         onRoute && 'node-route',
