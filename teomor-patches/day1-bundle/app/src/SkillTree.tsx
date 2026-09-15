@@ -38,22 +38,7 @@ const zoneEdgeColor: Record<ZoneType, string> = {
 };
 
 function buildNodes(treeData: SkillTreeData): Node[] {
-  const frames = getClusterFrames().map((f) => ({
-    id: f.id,
-    type: 'clusterFrame' as const,
-    // nodeOrigin [0.5,0.5] — position = центр рамки = центр хаба
-    position: { x: f.cx, y: f.cy },
-    data: {
-      kind: f.kind,
-      r: f.r,
-      zone: f.zone,
-      label: f.label,
-    },
-    draggable: false,
-    selectable: false,
-    focusable: false,
-    zIndex: -2,
-  }));
+  const frames = getClusterFrames();
   const skills = treeData.nodes.map((n) => ({
     id: n.id,
     type: 'skill' as const,
@@ -61,7 +46,39 @@ function buildNodes(treeData: SkillTreeData): Node[] {
     data: { node: n },
     zIndex: 1,
   }));
-  return [...frames, ...skills];
+  if (!frames.length) return skills;
+
+  // Один SVG-оверлей в координатах графа (не по node на рамку — иначе гигантский гекс).
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const f of frames) {
+    const r = Math.min(f.r, 280);
+    minX = Math.min(minX, f.cx - r);
+    minY = Math.min(minY, f.cy - r);
+    maxX = Math.max(maxX, f.cx + r);
+    maxY = Math.max(maxY, f.cy + r);
+  }
+  const pad = 8;
+  minX -= pad;
+  minY -= pad;
+  maxX += pad;
+  maxY += pad;
+  const width = Math.max(40, maxX - minX);
+  const height = Math.max(40, maxY - minY);
+  const overlay: Node = {
+    id: '__cluster_overlay__',
+    type: 'clusterFrame',
+    // при nodeOrigin [0.5,0.5] position = центр оверлея
+    position: { x: (minX + maxX) / 2, y: (minY + maxY) / 2 },
+    data: { frames, minX, minY, width, height },
+    draggable: false,
+    selectable: false,
+    focusable: false,
+    zIndex: -2,
+  };
+  return [overlay, ...skills];
 }
 
 export function SkillTree({ editMode }: { editMode: boolean }) {
