@@ -26,7 +26,7 @@ import {
 } from './coreRules';
 
 const LS_STATE = 'teomor_skill_tree_state_v4';
-const LS_DATA = 'teomor_skill_tree_data_v23';
+const LS_DATA = 'teomor_skill_tree_data_v24';
 
 
 const defaultState: SkillTreeState = {
