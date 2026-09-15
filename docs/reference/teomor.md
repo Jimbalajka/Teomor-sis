@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Path** | `/home/ec2-user/agent/teomor-patches/Код/` (канон) + `/tmp/teomor-sis` |
-| **Repo** | `Jimbalajka/Teomor-sis` · PR #25 `feat/tree-fork-logic` |
+| **Repo** | `Jimbalajka/Teomor-sis` · PR #26 `feat/tree-legend-colors` |
 | **Public URL** | https://teomor.acheaches.unstoppable-ai.site/0a95a994-teomor/ |
 | **Privacy** | секретный путь в URL (не для всего мира) |
 | **Run** | `npm run dev` → `127.0.0.1:5173`, nginx proxy + HTTPS |
