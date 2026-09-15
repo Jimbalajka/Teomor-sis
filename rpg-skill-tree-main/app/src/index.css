@@ -2366,3 +2366,14 @@ body {
   pointer-events: none !important;
   z-index: -2 !important;
 }
+
+/* Единый SVG-оверлей рамок — не интерактивен */
+.react-flow__node-clusterFrame {
+  pointer-events: none !important;
+}
+.cluster-overlay {
+  pointer-events: none !important;
+}
+.cluster-overlay-svg {
+  pointer-events: none !important;
+}

@@ -1,11 +1,13 @@
 import type { NodeProps } from '@xyflow/react';
 import type { ZoneType } from './types';
+import type { ClusterFrameSpec } from './treeLayout';
 
-export type ClusterFrameData = {
-  kind: 'hex' | 'diamond';
-  r: number;
-  zone: ZoneType;
-  label?: string;
+export type ClusterOverlayData = {
+  frames: ClusterFrameSpec[];
+  minX: number;
+  minY: number;
+  width: number;
+  height: number;
 };
 
 const ZONE_STROKE: Record<ZoneType, string> = {
@@ -16,7 +18,6 @@ const ZONE_STROKE: Record<ZoneType, string> = {
   wisdom: '#f59e0b',
 };
 
-/** Вершины pointy-top гекса (как hexOffset: старт сверху). */
 function hexPoints(cx: number, cy: number, r: number): string {
   const pts: string[] = [];
   for (let i = 0; i < 6; i++) {
@@ -31,43 +32,71 @@ function diamondPoints(cx: number, cy: number, r: number): string {
 }
 
 /**
- * Декоративная рамка кластера (гекс профессии / ромб углубления).
- * Не кликабельна — только визуал как на эталоне PoE.
+ * Один SVG на всё дерево — рамки в координатах графа.
+ * Так React Flow не раздувает отдельные node-рамки (гигантский гекс).
  */
-export function ClusterFrameNode({ data }: NodeProps) {
-  const { kind, r, zone, label } = data as unknown as ClusterFrameData;
-  const size = r * 2;
-  const cx = r;
-  const cy = r;
-  const stroke = ZONE_STROKE[zone] ?? '#94a3b8';
-  const points =
-    kind === 'hex' ? hexPoints(cx, cy, r - 4) : diamondPoints(cx, cy, r - 4);
-
+export function ClusterOverlayNode({ data }: NodeProps) {
+  const { frames, minX, minY, width, height } = data as unknown as ClusterOverlayData;
   return (
     <div
-      className={`cluster-frame cluster-frame-${kind} zone-${zone}`}
-      style={{ width: size, height: size, pointerEvents: 'none' }}
+      className="cluster-overlay"
+      style={{ width, height, pointerEvents: 'none', overflow: 'visible' }}
     >
-      <svg width={size} height={size} className="cluster-frame-svg">
-        <polygon
-          points={points}
-          fill={`${stroke}14`}
-          stroke={stroke}
-          strokeWidth={kind === 'hex' ? 2.5 : 2}
-          strokeDasharray={kind === 'diamond' ? '6 4' : undefined}
-          strokeLinejoin="round"
-        />
-        {kind === 'hex' && (
-          <polygon
-            points={hexPoints(cx, cy, r * 0.38)}
-            fill="none"
-            stroke={stroke}
-            strokeWidth={1}
-            opacity={0.35}
-          />
-        )}
+      <svg
+        width={width}
+        height={height}
+        className="cluster-overlay-svg"
+        style={{ overflow: 'visible', display: 'block' }}
+      >
+        {frames.map((f) => {
+          const stroke = ZONE_STROKE[f.zone] ?? '#94a3b8';
+          const cx = f.cx - minX;
+          const cy = f.cy - minY;
+          // жёсткий потолок — защита от битых r
+          const r = Math.min(f.r, 280);
+          const points =
+            f.kind === 'hex' ? hexPoints(cx, cy, r - 2) : diamondPoints(cx, cy, r - 2);
+          const isSchool = f.id.startsWith('hex_school_');
+          return (
+            <g key={f.id} opacity={isSchool ? 0.35 : 0.9}>
+              <polygon
+                points={points}
+                fill={`${stroke}${isSchool ? '08' : '12'}`}
+                stroke={stroke}
+                strokeWidth={f.kind === 'hex' ? (isSchool ? 1.5 : 2.25) : 1.75}
+                strokeDasharray={f.kind === 'diamond' ? '5 4' : undefined}
+                strokeLinejoin="round"
+              />
+              {f.kind === 'hex' && !isSchool && (
+                <polygon
+                  points={hexPoints(cx, cy, r * 0.36)}
+                  fill="none"
+                  stroke={stroke}
+                  strokeWidth={1}
+                  opacity={0.3}
+                />
+              )}
+              {f.label && !isSchool && (
+                <text
+                  x={cx}
+                  y={cy - r + 14}
+                  textAnchor="middle"
+                  fill={stroke}
+                  fontSize={10}
+                  fontWeight={600}
+                  opacity={0.75}
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {f.label}
+                </text>
+              )}
+            </g>
+          );
+        })}
       </svg>
-      {label && <span className="cluster-frame-label">{label}</span>}
     </div>
   );
 }
+
+/** @deprecated alias — старое имя импорта */
+export const ClusterFrameNode = ClusterOverlayNode;
