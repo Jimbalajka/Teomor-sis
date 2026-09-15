@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -15,6 +16,7 @@ import { blockReason } from './nodeStatus';
 import { raceById } from './races';
 import { backgroundById } from './backgrounds';
 import { TREE_ECONOMY } from './treeEconomy';
+import { buildRouteNodeSet, type TreeFocus } from './treeView';
 import {
   computeFatigueMax,
   computeKB,
@@ -24,7 +26,7 @@ import {
 } from './coreRules';
 
 const LS_STATE = 'teomor_skill_tree_state_v4';
-const LS_DATA = 'teomor_skill_tree_data_v9';
+const LS_DATA = 'teomor_skill_tree_data_v15';
 
 
 const defaultState: SkillTreeState = {
@@ -266,7 +268,7 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
         armorBonus: p.armorBonus ?? 0,
         discoveredSecrets: [],
         nodeChoices: p.nodeChoices ?? {},
-        raceChoices: p.raceChoices ?? {},
+        raceChoices: {},
       };
       if (p.sheetFields) {
         localStorage.setItem('teomor_sheet_v1', JSON.stringify(p.sheetFields));
@@ -292,6 +294,12 @@ interface SkillTreeContextValue {
   dispatch: React.Dispatch<Action>;
   totalStatModifiers: Record<string, number>;
   kb: number;
+  treeFocus: TreeFocus;
+  setTreeFocus: (focus: TreeFocus) => void;
+  showRouteHighlight: boolean;
+  setShowRouteHighlight: (show: boolean) => void;
+  routeHighlight: Set<string>;
+  highlightRoute: (allocatedIds: string[]) => void;
 }
 
 const SkillTreeContext = createContext<SkillTreeContextValue | undefined>(
@@ -358,20 +366,12 @@ function loadTree(): SkillTreeData {
   }
 }
 
-/** За уровень Дара (1–10): +1 к ключевой характеристике. */
+/** Ощутимый бонус за уровень Дара (1–10): +1 к ключевой характеристике за каждый уровень. */
 const DAR_LEVEL_STAT: Partial<Record<ZoneType, string>> = {
   magic: 'Разум',
   strength: 'Мощь',
   dexterity: 'Моторика',
   wisdom: 'Стержень',
-};
-
-/** Каждые 2 уровня Дара — +1 к «главному» навыку ветки (бодрая прогрессия). */
-const DAR_SIGNATURE_SKILL: Partial<Record<ZoneType, string>> = {
-  magic: 'Волшебство',
-  strength: 'Ближний бой (Мощь)',
-  dexterity: 'Дальний бой',
-  wisdom: 'Колдовство',
 };
 
 function computeTotals(
@@ -407,11 +407,10 @@ function computeTotals(
   }
   for (const [zone, stat] of Object.entries(DAR_LEVEL_STAT) as [ZoneType, string][]) {
     const darLvl = state.specializationLevels[zone] ?? 0;
-    if (darLvl <= 0) continue;
-    if (stat) totals[stat] = (totals[stat] ?? 0) + darLvl;
-    totals['Усталость'] = (totals['Усталость'] ?? 0) + Math.floor(darLvl / 3);
-    const sig = DAR_SIGNATURE_SKILL[zone];
-    if (sig) totals[sig] = (totals[sig] ?? 0) + Math.floor(darLvl / 2);
+    if (darLvl > 0 && stat) {
+      totals[stat] = (totals[stat] ?? 0) + darLvl;
+      totals['Усталость'] = (totals['Усталость'] ?? 0) + Math.floor(darLvl / 3);
+    }
   }
   return totals;
 }
@@ -419,6 +418,16 @@ function computeTotals(
 export function SkillTreeProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
   const [treeData, setTreeData] = useState<SkillTreeData>(loadTree);
+  const [treeFocus, setTreeFocus] = useState<TreeFocus>('all');
+  const [showRouteHighlight, setShowRouteHighlight] = useState(false);
+  const [routeHighlight, setRouteHighlight] = useState<Set<string>>(() => new Set());
+
+  const highlightRoute = useCallback(
+    (allocatedIds: string[]) => {
+      setRouteHighlight(buildRouteNodeSet(allocatedIds, treeData));
+    },
+    [treeData],
+  );
 
   const totalStatModifiers = useMemo(
     () => computeTotals(state, treeData),
@@ -454,7 +463,20 @@ export function SkillTreeProvider({ children }: { children: ReactNode }) {
 
   return (
     <SkillTreeContext.Provider
-      value={{ state, treeData, setTreeData, dispatch, totalStatModifiers, kb }}
+      value={{
+        state,
+        treeData,
+        setTreeData,
+        dispatch,
+        totalStatModifiers,
+        kb,
+        treeFocus,
+        setTreeFocus,
+        showRouteHighlight,
+        setShowRouteHighlight,
+        routeHighlight,
+        highlightRoute,
+      }}
     >
       {children}
     </SkillTreeContext.Provider>

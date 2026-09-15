@@ -63,7 +63,7 @@
 ## Приоритет работ (сейчас)
 1. **Плейтест 3 перс.** — обновить пресеты под новые ID
 2. UI sidebar — по скринам
-3. ~~Баланс позиций узлов~~ → сетка `TREE_CELL=160` (`treeLayout.ts`), слоты черт/ремёсел в отдельных колоннах ±1760
+3. Баланс позиций — `applyHighwayLayout` (шаг↑, слоты за |x|max), live URL в `docs/reference/teomor.md`
 
 ## Core v2 (кратко)
 - Валюта: **ОР** | Бой: **КБ**=10+укл+броня | **Раны** 2–6 | **Усталость**
@@ -104,6 +104,8 @@
 - `feat_witch_oracle` (witch + psionics)
 
 ## Не делать
+- **НЕ затирать** `Код/src/SkillTree*.tsx` / Context тонкой копией из agent — там живут toolbar, treeFocus, routeHighlight, applyHighwayLayout
+- UI-правки Теомора → сразу дать кликабельную HTTPS-ссылку (см. `docs/reference/teomor.md`), не «готово» без просмотра
 - Не менять архитектуру UI/CSS без запроса
 - Не добавлять banner/verify/buildInfo слои
 - Не менять архитектуру UI/CSS без запроса
@@ -113,6 +115,7 @@
 - Не трогать пресеты пока не готова ветка
 
 ## Changelog
+- 2026-09-15: restore UI (treeFocus/route) + denser highway spacing; slots вне веток; LS v15; live https://teomor.acheaches.unstoppable-ai.site/0a95a994-teomor/
 - 2026-09-15: сетка древа — `treeLayout.ts` (CELL 160), pack без наложений; слоты Черт/Ремёсел вынесены; дубли addRoad убраны; LS_DATA v9
 - 2026-03-28: green + amber + PR (all branches complete)
 - 2026-03-28: general branch + exclusiveGroup + magic/red rework (D&D/PoE forks)
