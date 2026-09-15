@@ -7,7 +7,7 @@
 | **Public URL** | https://teomor.acheaches.unstoppable-ai.site/0a95a994-teomor/ |
 | **Privacy** | секретный путь в URL (не для всего мира) |
 | **Run** | `npm run dev` → `127.0.0.1:5173`, nginx proxy + HTTPS |
-| **Layout** | `applyHighwayLayout` + развилки exclusiveGroup (Y/веер); тихие линии + hover; LS_DATA `v17` |
+| **Layout** | `applyHighwayLayout` + развилки exclusiveGroup (Y/веер); тихие линии + hover; LS_DATA `v18` |
 | **PR rule** | каждая пачка правок = **новый** PR (не дописывать в старый) |
 | **Эталон** | скрины пользователя: логика путей/развилок, не звезда из центра |
 

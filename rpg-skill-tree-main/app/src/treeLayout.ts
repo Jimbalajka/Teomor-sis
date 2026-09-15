@@ -13,15 +13,15 @@ const ZONE_ANGLE: Record<Exclude<ZoneType, 'center'>, number> = {
 /** Радиусы: центр редко, шоссе далеко — без каши у истока. */
 const R_RING = 360; // Воля / Закалка / Проворство / Эрудиция
 const R_HUB = 240; // Фундамент
-const R_FORK = 160; // шаг развилки от родителя вдоль шоссе
-const R_SPEC = 720;
-const R_SCHOOL = 1280;
-const HIGHWAY_STEP = 250;
+const R_FORK = 220; // шаг развилки от родителя вдоль шоссе
+const R_SPEC = 820;
+const R_SCHOOL = 1400;
+const HIGHWAY_STEP = 320;
 const PROF_ALONG = 180;
 /** Боковой разнос вариантов развилки — как на рисунке «один ствол → 2–3 ветки». */
-const FORK_PERP = 140;
+const FORK_PERP = 190;
 /** Узкий разнос на самом шоссе (не развилка). */
-const PERP_TIGHT = 40;
+const PERP_TIGHT = 55;
 
 function polar(r: number, angle: number) {
   return { x: Math.round(Math.cos(angle) * r), y: Math.round(Math.sin(angle) * r) };
@@ -51,7 +51,7 @@ function topoOrder(nodes: SkillNode[]): SkillNode[] {
   return ordered;
 }
 
-function relaxLayout(source: SkillNode[], minDist = 170, iterations = 14): SkillNode[] {
+function relaxLayout(source: SkillNode[], minDist = 190, iterations = 18): SkillNode[] {
   const out = source.map((n) => ({ ...n }));
   const locked = new Set<SkillNode['category']>([
     'root',
@@ -60,8 +60,8 @@ function relaxLayout(source: SkillNode[], minDist = 170, iterations = 14): Skill
     'feat_slot',
     'craft_slot',
   ]);
+  // exclusiveGroup НЕ лочим — иначе соседние школы оставляют развилки внахлёст
   const lockedIds = new Set<string>([
-    ...out.filter((n) => n.exclusiveGroup).map((n) => n.id),
     'g_will',
     'g_grit',
     'g_swift',
@@ -191,7 +191,7 @@ function placeExclusiveFork(
   }
 
   const pr = Math.hypot(anchor.x, anchor.y) || R_SCHOOL;
-  const fork = polar(pr + R_FORK + groupSalt * 90, anchorAngle);
+  const fork = polar(pr + R_FORK + groupSalt * 200, anchorAngle);
   const perpA = anchorAngle + Math.PI / 2;
   members.forEach((p, i) => {
     const off = (i - (members.length - 1) / 2) * FORK_PERP;
@@ -269,10 +269,12 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
       .filter((n) => n.zone === zone && n.category === 'subcategory')
       .sort((a, b) => a.id.localeCompare(b.id));
     const base = ZONE_ANGLE[zone];
-    const spread = Math.min(18 * DEG, (64 * DEG) / Math.max(schools.length, 1));
+    // широкий веер + разный радиус, чтобы развилки соседних школ не пересекались
+    const spread = Math.min(26 * DEG, (88 * DEG) / Math.max(schools.length, 1));
     schools.forEach((s, i) => {
       const a = base + (i - (schools.length - 1) / 2) * spread;
-      pos.set(s.id, polar(R_SCHOOL, a));
+      const r = R_SCHOOL + (i % 2) * 160 + Math.floor(i / 2) * 40;
+      pos.set(s.id, polar(r, a));
       angleOf.set(s.id, a);
     });
   }
@@ -405,19 +407,62 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
     x: Math.round(n.x / 20) * 20,
     y: Math.round(n.y / 20) * 20,
   }));
-  // Финальный развод точных совпадений (после снапа)
-  const cell = new Map<string, number>();
-  for (let i = 0; i < snapped.length; i++) {
-    const k = `${snapped[i].x},${snapped[i].y}`;
-    if (!cell.has(k)) {
-      cell.set(k, i);
-      continue;
+  // Финальный развод: сначала точные клетки, потом всё < 140
+  const pushApart = (arr: SkillNode[], minD: number, rounds: number) => {
+    for (let r = 0; r < rounds; r++) {
+      for (let i = 0; i < arr.length; i++) {
+        for (let j = i + 1; j < arr.length; j++) {
+          const dx = arr[j].x - arr[i].x;
+          const dy = arr[j].y - arr[i].y;
+          const d = Math.hypot(dx, dy) || 1;
+          if (d >= minD) continue;
+          const push = (minD - d) / 2 + 2;
+          const ux = dx / d;
+          const uy = dy / d;
+          const catI = arr[i].category;
+          const catJ = arr[j].category;
+          const lockI = catI === 'root' || catI === 'feat_slot' || catI === 'craft_slot' || catI === 'specialization' || catI === 'subcategory';
+          const lockJ = catJ === 'root' || catJ === 'feat_slot' || catJ === 'craft_slot' || catJ === 'specialization' || catJ === 'subcategory';
+          if (!lockI) {
+            arr[i].x -= Math.round(ux * push);
+            arr[i].y -= Math.round(uy * push);
+          }
+          if (!lockJ) {
+            arr[j].x += Math.round(ux * push);
+            arr[j].y += Math.round(uy * push);
+          }
+          if (lockI && lockJ) {
+            // школы/спеки тоже слегка разводим поперёк, иначе каша зон
+            arr[j].x += Math.round(Math.cos(Math.atan2(arr[j].y, arr[j].x) + Math.PI / 2) * push);
+            arr[j].y += Math.round(Math.sin(Math.atan2(arr[j].y, arr[j].x) + Math.PI / 2) * push);
+          }
+        }
+      }
     }
-    const a = Math.atan2(snapped[i].y || 1, snapped[i].x || 1);
-    snapped[i].x += Math.round(Math.cos(a + Math.PI / 2) * 160);
-    snapped[i].y += Math.round(Math.sin(a + Math.PI / 2) * 160);
-    snapped[i].x = Math.round(snapped[i].x / 20) * 20;
-    snapped[i].y = Math.round(snapped[i].y / 20) * 20;
+    for (const n of arr) {
+      n.x = Math.round(n.x / 20) * 20;
+      n.y = Math.round(n.y / 20) * 20;
+    }
+  };
+  pushApart(snapped, 140, 18);
+  // Жёсткий развод точных совпадений после снапа (пока есть дубликаты клеток)
+  for (let guard = 0; guard < 40; guard++) {
+    const cell = new Map<string, number>();
+    let moved = false;
+    for (let i = 0; i < snapped.length; i++) {
+      const k = `${snapped[i].x},${snapped[i].y}`;
+      if (!cell.has(k)) {
+        cell.set(k, i);
+        continue;
+      }
+      const a = Math.atan2(snapped[i].y || 1, snapped[i].x || 1) + (guard % 4) * (Math.PI / 2);
+      snapped[i].x += Math.round(Math.cos(a + Math.PI / 2) * (160 + guard * 20));
+      snapped[i].y += Math.round(Math.sin(a + Math.PI / 2) * (160 + guard * 20));
+      snapped[i].x = Math.round(snapped[i].x / 20) * 20;
+      snapped[i].y = Math.round(snapped[i].y / 20) * 20;
+      moved = true;
+    }
+    if (!moved) break;
   }
   return snapped;
 }
