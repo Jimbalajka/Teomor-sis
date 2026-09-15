@@ -2224,6 +2224,14 @@ body {
   width: 48px;
   height: 48px;
 }
+
+/* Хаб профессии — крупнее (центр гекса) */
+.node-prof.node-transit {
+  width: 86px;
+  height: 86px;
+  border-width: 3px;
+}
+
 .node-prof {
   width: 72px;
   height: 72px;
