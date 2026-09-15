@@ -1,19 +1,21 @@
 import type { SkillNode, ZoneType } from './types';
 
 /**
- * Хабы-гексы (эталон пользователя после квадрантов):
- * - зона = компактное поле, не «километровая линейка»
- * - профессия = центр гексагона, вокруг общие навыки ветки
- * - углубление = ромб/малый кластер рядом с гексом
- * - длинные цепочки (колдовство и т.п.) сворачиваются в хабы
- * - видимые SVG-рамки гекс/ромб (ClusterFrameNode)
+ * Компактные хабы (эталон пользователя):
+ * - квадранты зон, без километровых шоссе
+ * - профессия в центре гекса, навыки строго на 6 вершинах
+ * - углубления = маленький ромб рядом
+ * - relax НЕ ломает геометрию хабов
+ * - видимые рамки = фиксированный r вокруг хаба
  */
-const CELL = 150;
-const GAP = CELL * 3;
-const SCHOOL_GAP = CELL * 9; // между школами в квадранте — место под гексы
-const HEX_R = CELL * 1.75; // радиус кольца / видимого гекса
-const HUB_GAP = CELL * 5.2; // между профессиями-хабами одной школы
-const DEEP_R = CELL * 1.35; // ромб углубления
+const CELL = 140;
+const GAP = CELL * 2.8;
+const SCHOOL_GAP = CELL * 6.2;
+const SCHOOL_ROW = CELL * 6.8;
+const HEX_R = CELL * 1.55; // кольцо навыков
+const HUB_GAP = CELL * 4.6;
+const DEEP_R = CELL * 1.15;
+const DEEP_OUT = HEX_R * 2.55;
 
 export type ClusterFrameSpec = {
   id: string;
@@ -23,16 +25,15 @@ export type ClusterFrameSpec = {
   r: number;
   zone: ZoneType;
   label?: string;
-  /** id узлов, вокруг которых держим рамку (после relax — пересчитать cx/cy) */
   anchorIds: string[];
 };
 
 let lastClusterFrames: ClusterFrameSpec[] = [];
 
-/** Рамки последнего layout — SkillTree рисует их как node type clusterFrame. */
 export function getClusterFrames(): ClusterFrameSpec[] {
   return lastClusterFrames;
 }
+
 type BoardZone = Exclude<ZoneType, 'center'>;
 
 function zoneOrigin(zone: BoardZone): { x: number; y: number } {
@@ -48,7 +49,6 @@ function zoneOrigin(zone: BoardZone): { x: number; y: number } {
   }
 }
 
-/** Наружу от центра + «вдоль» полос школ внутри квадранта. */
 function zonePoint(zone: BoardZone, out: number, along: number): { x: number; y: number } {
   const o = zoneOrigin(zone);
   switch (zone) {
@@ -63,17 +63,16 @@ function zonePoint(zone: BoardZone, out: number, along: number): { x: number; y:
   }
 }
 
-/** Узлы строго на вершинах гекса (pointy-top); >6 → второе кольцо. */
-function hexOffset(i: number, _n: number, r: number): { x: number; y: number } {
+/** Pointy-top: ровно 6 вершин; >6 → второе кольцо. */
+function hexOffset(i: number, r: number): { x: number; y: number } {
   const ring = Math.floor(i / 6);
   const slot = i % 6;
-  const rr = r * (1 + ring * 0.9);
+  const rr = r * (1 + ring * 0.95);
   const a = -Math.PI / 2 + slot * (Math.PI / 3);
   return { x: Math.round(Math.cos(a) * rr), y: Math.round(Math.sin(a) * rr) };
 }
 
 function diamondOffset(i: number, n: number, r: number): { x: number; y: number } {
-  // ромб: 4 угла; если больше — кольцо поменьше
   if (n <= 4) {
     const corners = [
       { x: 0, y: -r },
@@ -81,9 +80,65 @@ function diamondOffset(i: number, n: number, r: number): { x: number; y: number 
       { x: 0, y: r },
       { x: -r, y: 0 },
     ];
-    return corners[i] ?? hexOffset(i, n, r);
+    return corners[i] ?? hexOffset(i, r);
   }
-  return hexOffset(i, n, r);
+  return hexOffset(i, r);
+}
+
+function resolveSchoolId(
+  node: SkillNode,
+  byId: Map<string, SkillNode>,
+  cache: Map<string, string | null>,
+): string | null {
+  if (cache.has(node.id)) return cache.get(node.id)!;
+  if (node.category === 'subcategory') {
+    cache.set(node.id, node.id);
+    return node.id;
+  }
+  for (const pid of node.requirements?.parentIds ?? []) {
+    const parent = byId.get(pid);
+    if (!parent) continue;
+    const sid = resolveSchoolId(parent, byId, cache);
+    if (sid) {
+      cache.set(node.id, sid);
+      return sid;
+    }
+  }
+  cache.set(node.id, null);
+  return null;
+}
+
+function isProfessionHub(n: SkillNode): boolean {
+  if (n.exclusiveGroup?.startsWith('prof_')) return true;
+  if (
+    n.exclusiveGroup?.startsWith('fork_') &&
+    n.category === 'transit_specialized' &&
+    (n.id.startsWith('prof_') || n.id.startsWith('st_'))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function collectDescendants(
+  rootId: string,
+  _byId: Map<string, SkillNode>,
+  childrenOf: Map<string, SkillNode[]>,
+): SkillNode[] {
+  const out: SkillNode[] = [];
+  const stack = [rootId];
+  const seen = new Set<string>([rootId]);
+  while (stack.length) {
+    const id = stack.pop()!;
+    for (const c of childrenOf.get(id) ?? []) {
+      if (seen.has(c.id)) continue;
+      if (isProfessionHub(c) && c.id !== rootId) continue;
+      seen.add(c.id);
+      out.push(c);
+      stack.push(c.id);
+    }
+  }
+  return out;
 }
 
 function topoOrder(nodes: SkillNode[]): SkillNode[] {
@@ -110,69 +165,20 @@ function topoOrder(nodes: SkillNode[]): SkillNode[] {
   return ordered;
 }
 
-function resolveSchoolId(
-  node: SkillNode,
-  byId: Map<string, SkillNode>,
-  cache: Map<string, string | null>,
-): string | null {
-  if (cache.has(node.id)) return cache.get(node.id)!;
-  if (node.category === 'subcategory') {
-    cache.set(node.id, node.id);
-    return node.id;
-  }
-  for (const pid of node.requirements?.parentIds ?? []) {
-    const parent = byId.get(pid);
-    if (!parent) continue;
-    const sid = resolveSchoolId(parent, byId, cache);
-    if (sid) {
-      cache.set(node.id, sid);
-      return sid;
-    }
-  }
-  cache.set(node.id, null);
-  return null;
-}
-
-function collectDescendants(
-  rootId: string,
-  byId: Map<string, SkillNode>,
-  childrenOf: Map<string, SkillNode[]>,
-): SkillNode[] {
-  const out: SkillNode[] = [];
-  const stack = [rootId];
-  const seen = new Set<string>([rootId]);
-  while (stack.length) {
-    const id = stack.pop()!;
-    for (const c of childrenOf.get(id) ?? []) {
-      if (seen.has(c.id)) continue;
-      // не заходим в чужой profession-hub того же уровня
-      if (
-        c.exclusiveGroup?.startsWith('prof_') &&
-        c.id !== rootId &&
-        byId.get(rootId)?.exclusiveGroup?.startsWith('prof_')
-      ) {
-        continue;
-      }
-      seen.add(c.id);
-      out.push(c);
-      stack.push(c.id);
-    }
-  }
-  return out;
-}
-
 export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
   const nodes = source.map((n) => ({ ...n }));
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const pos = new Map<string, { x: number; y: number }>();
+  const locked = new Set<string>(); // не двигаем relax'ом
   const draftFrames: ClusterFrameSpec[] = [];
 
-  const put = (id: string, x: number, y: number) => {
+  const put = (id: string, x: number, y: number, lock = false) => {
     pos.set(id, { x: Math.round(x / 20) * 20, y: Math.round(y / 20) * 20 });
+    if (lock) locked.add(id);
   };
 
   // ── Центр ──────────────────────────────────────────────
-  put('center_start', 0, 0);
+  put('center_start', 0, 0, true);
   const centerGrid: Array<[string, number, number]> = [
     ['g_hub', 0, -1],
     ['g_will', -1, -1],
@@ -187,7 +193,7 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
     ['g_path_body', 1, -2],
   ];
   for (const [id, cx, cy] of centerGrid) {
-    if (byId.has(id)) put(id, cx * CELL, cy * CELL);
+    if (byId.has(id)) put(id, cx * CELL, cy * CELL, true);
   }
 
   const childrenOf = new Map<string, SkillNode[]>();
@@ -201,7 +207,6 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
 
   const schoolCache = new Map<string, string | null>();
 
-  // ── По зонам: школа → хабы профессий (гекс) → ромбы углублений ──
   for (const zone of ['magic', 'strength', 'dexterity', 'wisdom'] as const) {
     const schools = nodes
       .filter((n) => n.zone === zone && n.category === 'subcategory')
@@ -210,76 +215,72 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
     const spec = nodes.find((n) => n.zone === zone && n.category === 'specialization');
     if (spec) {
       const mid = ((schools.length - 1) * SCHOOL_GAP) / 2;
-      const p = zonePoint(zone, CELL, mid);
-      put(spec.id, p.x, p.y);
+      const p = zonePoint(zone, CELL * 0.8, mid);
+      put(spec.id, p.x, p.y, true);
     }
 
+    // Школы сеткой 2 колонки — без километровой ленты
+    const schoolCols = schools.length <= 3 ? 1 : 2;
     schools.forEach((school, si) => {
-      const along0 = si * SCHOOL_GAP;
-      const sp = zonePoint(zone, CELL * 2, along0);
-      put(school.id, sp.x, sp.y);
+      const col = si % schoolCols;
+      const row = Math.floor(si / schoolCols);
+      const along0 = (col - (schoolCols - 1) / 2) * SCHOOL_GAP;
+      const out0 = CELL * 1.6 + row * SCHOOL_ROW;
+      const sp = zonePoint(zone, out0, along0);
+      put(school.id, sp.x, sp.y, true);
 
-      // навыки школы до выбора профессии (не exclusive prof_)
-      const schoolDirect = (childrenOf.get(school.id) ?? []).filter(
-        (c) => !c.exclusiveGroup?.startsWith('prof_'),
-      );
-      // профессии этой школы (прямые + через mid + fork_arist и т.п.)
-      // см. allProfs ниже — единый фильтр по resolveSchoolId
+      const schoolDirect = (childrenOf.get(school.id) ?? []).filter((c) => !isProfessionHub(c));
 
-      const allProfs = nodes.filter((n) => {
-        if (n.zone !== zone) return false;
-        if (resolveSchoolId(n, byId, schoolCache) !== school.id) return false;
-        if (n.exclusiveGroup?.startsWith('prof_')) return true;
-        // развилка профессий без pref prof_ (fork_arist и т.п.) — тоже хабы, если это «выбор класса»
-        if (
-          n.exclusiveGroup?.startsWith('fork_') &&
-          n.category === 'transit_specialized' &&
-          (n.id.startsWith('prof_') || n.id.startsWith('st_'))
-        ) {
-          return true;
-        }
-        return false;
-      });
+      const allProfs = nodes
+        .filter(
+          (n) =>
+            n.zone === zone &&
+            isProfessionHub(n) &&
+            resolveSchoolId(n, byId, schoolCache) === school.id,
+        )
+        .sort((a, b) => a.id.localeCompare(b.id));
 
-      // кольцо навыков прямо у школы (общие до/вне профы)
-      const schoolRing = schoolDirect.filter(
-        (c) => !allProfs.some((p) => p.id === c.id) && !pos.has(c.id),
-      );
+      // Кольцо у школы — только прямые не-проф дети (макс 6 на гексе)
+      const schoolRing = schoolDirect.filter((c) => !pos.has(c.id)).slice(0, 12);
       schoolRing.forEach((c, i) => {
-        const off = hexOffset(i, schoolRing.length, HEX_R * 0.85);
-        put(c.id, sp.x + off.x, sp.y + off.y);
+        const off = hexOffset(i, HEX_R * 0.9);
+        put(c.id, sp.x + off.x, sp.y + off.y, true);
       });
+      // рамка школы — только если есть кольцо
       if (schoolRing.length > 0) {
+        const rings = Math.ceil(schoolRing.length / 6);
         draftFrames.push({
           id: `hex_school_${school.id}`,
           kind: 'hex',
           cx: sp.x,
           cy: sp.y,
-          r: Math.round(HEX_R * 0.85 + 55),
+          r: Math.round(HEX_R * 0.9 * (1 + (rings - 1) * 0.95) + 48),
           zone,
           label: school.label,
           anchorIds: [school.id, ...schoolRing.map((c) => c.id)],
         });
       }
 
-      // хабы профессий — компактный ряд/дуга рядом со школой
-      const hubs = allProfs.sort((a, b) => a.id.localeCompare(b.id));
-      hubs.forEach((hub, hi) => {
-        const cols = Math.min(3, hubs.length);
+      allProfs.forEach((hub, hi) => {
+        const cols = Math.min(2, Math.max(allProfs.length, 1));
         const row = Math.floor(hi / cols);
         const col = hi % cols;
         const hubAlong = along0 + (col - (cols - 1) / 2) * HUB_GAP;
-        const hubOut = CELL * 2 + HEX_R * 2.4 + row * (HEX_R * 3.0);
+        const hubOut = out0 + HEX_R * 2.5 + row * (HEX_R * 2.9);
         const hp = zonePoint(zone, hubOut, hubAlong);
-        put(hub.id, hp.x, hp.y);
+        put(hub.id, hp.x, hp.y, true);
 
         const desc = collectDescendants(hub.id, byId, childrenOf).filter((d) => !pos.has(d.id));
 
-        // углубления = exclusiveGroup feat-форки и группы
         const deepGroups = new Map<string, SkillNode[]>();
         const ringNodes: SkillNode[] = [];
         for (const d of desc) {
-          if (d.exclusiveGroup && d.exclusiveGroup !== hub.exclusiveGroup) {
+          // углубление = отдельная exclusiveGroup (fork_*), не сам хаб
+          if (
+            d.exclusiveGroup &&
+            d.exclusiveGroup !== hub.exclusiveGroup &&
+            (d.exclusiveGroup.startsWith('fork_') || d.category === 'feat')
+          ) {
             if (!deepGroups.has(d.exclusiveGroup)) deepGroups.set(d.exclusiveGroup, []);
             deepGroups.get(d.exclusiveGroup)!.push(d);
           } else {
@@ -287,48 +288,64 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
           }
         }
 
-        // гекс вокруг профессии — узлы на вершинах
+        // гекс: максимум 12 (2 кольца), остальное — во второе кольцо / отбрасываем в deep
         ringNodes.sort((a, b) => a.id.localeCompare(b.id));
-        ringNodes.forEach((d, i) => {
-          const off = hexOffset(i, ringNodes.length, HEX_R);
-          put(d.id, hp.x + off.x, hp.y + off.y);
+        const onHex = ringNodes.slice(0, 12);
+        const overflow = ringNodes.slice(12);
+        onHex.forEach((d, i) => {
+          const off = hexOffset(i, HEX_R);
+          put(d.id, hp.x + off.x, hp.y + off.y, true);
         });
+        // overflow пристраиваем как мини-ромб «хвост»
+        if (overflow.length) {
+          deepGroups.set(`__tail_${hub.id}`, overflow);
+        }
+
+        const rings = Math.max(1, Math.ceil(onHex.length / 6));
         draftFrames.push({
           id: `hex_${hub.id}`,
           kind: 'hex',
           cx: hp.x,
           cy: hp.y,
-          r: Math.round(HEX_R + 60),
+          r: Math.round(HEX_R * (1 + (rings - 1) * 0.95) + 52),
           zone,
           label: hub.label,
-          anchorIds: [hub.id, ...ringNodes.map((d) => d.id)],
+          anchorIds: [hub.id, ...onHex.map((d) => d.id)],
         });
 
-        // ромбы углублений — снаружи гекса
         let di = 0;
-        for (const [gName, members] of [...deepGroups.entries()].sort((a, b) =>
-          a[0].localeCompare(b[0]),
-        )) {
+        const deepEntries = [...deepGroups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+        for (const [, members] of deepEntries) {
           members.sort((a, b) => a.id.localeCompare(b.id));
-          const a = -Math.PI / 2 + di * ((2 * Math.PI) / Math.max(deepGroups.size, 1));
-          const cx = hp.x + Math.round(Math.cos(a) * (HEX_R * 3.2));
-          const cy = hp.y + Math.round(Math.sin(a) * (HEX_R * 3.2));
+          const a =
+            -Math.PI / 2 + di * ((2 * Math.PI) / Math.max(deepEntries.length, 1));
+          const cx = hp.x + Math.round(Math.cos(a) * DEEP_OUT);
+          const cy = hp.y + Math.round(Math.sin(a) * DEEP_OUT);
           if (members.length === 1) {
-            put(members[0].id, cx, cy);
+            put(members[0].id, cx, cy, true);
           } else {
-            members.forEach((m, i) => {
-              const off = diamondOffset(i, members.length, DEEP_R);
-              put(m.id, cx + off.x, cy + off.y);
+            members.slice(0, 4).forEach((m, i) => {
+              const off = diamondOffset(i, Math.min(members.length, 4), DEEP_R);
+              put(m.id, cx + off.x, cy + off.y, true);
+            });
+            // лишнее — дальше по тому же лучу
+            members.slice(4).forEach((m, i) => {
+              put(
+                m.id,
+                cx + Math.round(Math.cos(a) * (DEEP_R * (1.6 + i * 0.7))),
+                cy + Math.round(Math.sin(a) * (DEEP_R * (1.6 + i * 0.7))),
+                true,
+              );
             });
           }
           draftFrames.push({
-            id: `dia_${hub.id}_${gName}`,
+            id: `dia_${hub.id}_${di}`,
             kind: 'diamond',
             cx,
             cy,
-            r: Math.round(DEEP_R + 50),
+            r: Math.round(DEEP_R + 44),
             zone,
-            anchorIds: members.map((m) => m.id),
+            anchorIds: members.slice(0, 4).map((m) => m.id),
           });
           di++;
         }
@@ -336,53 +353,49 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
     });
   }
 
-  // ── Остаток (не размещён) — рядом с родителем / школой ──
+  // Остаток — рядом с родителем
   for (const n of topoOrder(nodes)) {
     if (pos.has(n.id)) continue;
     if (n.category === 'feat_slot' || n.category === 'craft_slot') continue;
     const parentId = n.requirements?.parentIds?.[0];
     const pp = parentId ? pos.get(parentId) : undefined;
     if (pp) {
-      const sibs = (childrenOf.get(parentId!) ?? []).filter((s) => !pos.has(s.id) || s.id === n.id);
+      const sibs = (childrenOf.get(parentId!) ?? []).filter(
+        (s) => !pos.has(s.id) || s.id === n.id,
+      );
       const idx = Math.max(0, sibs.findIndex((s) => s.id === n.id));
-      const off = hexOffset(idx, Math.max(sibs.length, 4), CELL);
-      put(n.id, pp.x + off.x, pp.y + off.y);
+      const off = hexOffset(idx, CELL * 0.95);
+      put(n.id, pp.x + off.x, pp.y + off.y, false);
       continue;
     }
     if (n.zone !== 'center') {
-      const p = zonePoint(n.zone, CELL * 4, 0);
-      put(n.id, p.x, p.y);
+      const p = zonePoint(n.zone, CELL * 3, 0);
+      put(n.id, p.x, p.y, false);
     }
   }
 
-  // center leftovers
-  for (const n of topoOrder(nodes)) {
-    if (pos.has(n.id) || n.zone !== 'center') continue;
-    if (n.category === 'feat_slot' || n.category === 'craft_slot') continue;
-    const parentId = n.requirements?.parentIds?.[0];
-    const pp = parentId ? pos.get(parentId) : { x: 0, y: 0 };
-    if (!pp) continue;
-    put(n.id, pp.x, pp.y - CELL);
-  }
-
-  // слоты
+  // Слоты
+  let maxAbsX = 0;
+  for (const p of pos.values()) maxAbsX = Math.max(maxAbsX, Math.abs(p.x));
+  const slotX = Math.max(CELL * 16, maxAbsX + CELL * 3);
   nodes
     .filter((n) => n.category === 'feat_slot')
     .sort((a, b) => a.id.localeCompare(b.id))
-    .forEach((n, i) => put(n.id, -(GAP + CELL * 12), (i - 1) * CELL * 2));
+    .forEach((n, i) => put(n.id, -slotX, -CELL * 2 + i * CELL * 2, true));
   nodes
     .filter((n) => n.category === 'craft_slot')
     .sort((a, b) => a.id.localeCompare(b.id))
-    .forEach((n, i) => put(n.id, GAP + CELL * 12, (i - 1) * CELL * 2));
+    .forEach((n, i) => put(n.id, slotX, -CELL * 2 + i * CELL * 2, true));
 
-  const out = nodes.map((n) => {
+  const placed = nodes.map((n) => {
     const p = pos.get(n.id);
     return p ? { ...n, x: p.x, y: p.y } : n;
   });
 
-  // развод: сначала точные клетки, потом всё < CELL*0.9 внутри одной зоны
-  const minD = CELL;
-  for (let iter = 0; iter < 24; iter++) {
+  // Мягкий развод ТОЛЬКО незалоченных (хвосты)
+  const out = placed.map((n) => ({ ...n }));
+  const minD = CELL * 0.85;
+  for (let iter = 0; iter < 10; iter++) {
     for (let i = 0; i < out.length; i++) {
       for (let j = i + 1; j < out.length; j++) {
         if (out[i].zone !== out[j].zone) continue;
@@ -393,13 +406,11 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
         const push = (minD - d) / 2 + 2;
         const ux = dx / d;
         const uy = dy / d;
-        const lock = (c: string) =>
-          c === 'root' || c === 'specialization' || c === 'subcategory' || c === 'feat_slot' || c === 'craft_slot';
-        if (!lock(out[i].category)) {
+        if (!locked.has(out[i].id)) {
           out[i].x -= Math.round(ux * push);
           out[i].y -= Math.round(uy * push);
         }
-        if (!lock(out[j].category)) {
+        if (!locked.has(out[j].id)) {
           out[j].x += Math.round(ux * push);
           out[j].y += Math.round(uy * push);
         }
@@ -410,6 +421,8 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
     n.x = Math.round(n.x / 20) * 20;
     n.y = Math.round(n.y / 20) * 20;
   }
+
+  // точные совпадения (даже locked — иначе рамка врёт)
   for (let guard = 0; guard < 40; guard++) {
     const seen = new Map<string, number>();
     let moved = false;
@@ -429,35 +442,15 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
     if (!moved) break;
   }
 
-  // добивка пар < 120
-  for (let iter = 0; iter < 10; iter++) {
-    for (let i = 0; i < out.length; i++) {
-      for (let j = i + 1; j < out.length; j++) {
-        const dx = out[j].x - out[i].x;
-        const dy = out[j].y - out[i].y;
-        const d = Math.hypot(dx, dy) || 1;
-        if (d >= 120) continue;
-        const push = (120 - d) / 2 + 4;
-        const ux = dx / d;
-        const uy = dy / d;
-        out[j].x += Math.round(ux * push);
-        out[j].y += Math.round(uy * push);
-        out[j].x = Math.round(out[j].x / 20) * 20;
-        out[j].y = Math.round(out[j].y / 20) * 20;
-      }
-    }
-  }
-
-  // Рамки после relax — центр по якорям (профессия / члены ромба)
+  // Рамки: центр = хаб (первый якорь) после финальных координат; r НЕ раздуваем
   const byFinal = new Map(out.map((n) => [n.id, n]));
   lastClusterFrames = draftFrames.map((f) => {
-    const anchors = f.anchorIds.map((id) => byFinal.get(id)).filter(Boolean) as SkillNode[];
-    if (!anchors.length) return f;
-    if (f.kind === 'hex') {
-      // центр гекса = хаб (первый якорь) если есть, иначе среднее
-      const hub = byFinal.get(f.anchorIds[0]) ?? anchors[0];
+    const hub = byFinal.get(f.anchorIds[0]);
+    if (f.kind === 'hex' && hub) {
       return { ...f, cx: hub.x, cy: hub.y };
     }
+    const anchors = f.anchorIds.map((id) => byFinal.get(id)).filter(Boolean) as SkillNode[];
+    if (!anchors.length) return f;
     const cx = Math.round(anchors.reduce((s, n) => s + n.x, 0) / anchors.length);
     const cy = Math.round(anchors.reduce((s, n) => s + n.y, 0) / anchors.length);
     return { ...f, cx, cy };
