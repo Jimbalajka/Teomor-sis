@@ -1,9 +1,18 @@
 import type { SkillTreeData, SkillNode, SkillEdge } from './types';
 import { dexterityProfessionNodes } from './dexterityProfessions';
+import {
+  ROAD_START,
+  ROAD_STEP,
+  SLOT_COL,
+  SLOT_ROW0,
+  SLOT_ROW_STEP,
+  packNodesToGrid,
+} from './treeLayout';
 
 // Древо «Теомор». Специализации (Дары) — прямо от центра. Внутри Дара: школы
 // (subcategory) = пути Квеля; под школами — суб-типы профессий (transit_specialized)
 // и транзитные навыки/черты. Правится здесь или в редакторе приложения.
+// Позиции сажаются на сетку TREE_CELL (см. treeLayout.ts) — без наложений.
 //
 // Таксономия профессий (по решению автора):
 //  РАЗУМ (Дар Медведя): Волшебство {Некромант, Кровавый маг, Хрономант, Иллюзионист,
@@ -134,9 +143,9 @@ const nodes: SkillNode[] = [
   { ...school('sch_leader', -280, 560, 'Лидерство', 'wisdom', 'Влияние, командование, вдохновение.'), requirements: { parentIds: ['spec_wisdom'], requiredSpecialization: { zone: 'wisdom', level: 1 } } },
   { id: 'ts_command', x: -300, y: 700, label: 'Командование', zone: 'wisdom', category: 'transit_specialized', cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['sch_leader'], requiredSpecialization: { zone: 'wisdom', level: 2 } }, statModifiers: { Лидерство: 1 }, description: '+1 к Лидерству; союзник смещается на 2 клетки вне хода.' },
 
-  // ── Слоты ЧЕРТ (слева): 1 покупка за 4 уровня, попап выбора черты ──
+  // ── Слоты ЧЕРТ (левая колонна за ветками): 1 покупка / 4 ур. ──
   ...['feat_slot_1', 'feat_slot_2', 'feat_slot_3'].map((id, i): SkillNode => ({
-    id, x: -1080, y: -160 + i * 160, label: 'Черта', zone: 'center', category: 'feat_slot',
+    id, x: SLOT_COL.feat, y: SLOT_ROW0 + i * SLOT_ROW_STEP, label: 'Черта', zone: 'center', category: 'feat_slot',
     cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] },
     description: 'Слот Черты. Доступен раз в 4 уровня. Открывает выбор черты.',
     choices: [{
@@ -151,9 +160,9 @@ const nodes: SkillNode[] = [
     }],
   })),
 
-  // ── Слоты РЕМЁСЕЛ/ВЛАДЕНИЙ (справа): попап выбора ремесла ──
+  // ── Слоты РЕМЁСЕЛ (правая колонна за ветками) ──
   ...['craft_slot_1', 'craft_slot_2', 'craft_slot_3'].map((id, i): SkillNode => ({
-    id, x: 1080, y: -160 + i * 160, label: 'Ремесло', zone: 'center', category: 'craft_slot',
+    id, x: SLOT_COL.craft, y: SLOT_ROW0 + i * SLOT_ROW_STEP, label: 'Ремесло', zone: 'center', category: 'craft_slot',
     cost: { type: 'OR', amount: 1 }, requirements: { parentIds: ['center_start'] },
     description: 'Слот Ремесла/владения. Доступен раз в 4 уровня. Открывает выбор ремесла.',
     choices: [{
@@ -176,8 +185,8 @@ function addRoad(
   let prev = parent;
   steps.forEach((st, i) => {
     const id = `road_${parent}_${i}`;
-    const x = Math.round(sx + ux * (200 + i * 150));
-    const y = Math.round(sy + uy * (200 + i * 150));
+    const x = Math.round(sx + ux * (ROAD_START + i * ROAD_STEP));
+    const y = Math.round(sy + uy * (ROAD_START + i * ROAD_STEP));
     const reqLevel = st.t === 's' ? 2 : st.t === 'n' ? 4 : 6;
     nodes.push({
       id, x, y, label: st.label, zone,
@@ -208,24 +217,6 @@ addRoad('sch_berserk', 520, -300, 'strength', [
   { t: 's', label: '+1 Атлетика', mods: { Атлетика: 1 } },
   { t: 'n', label: 'Кровавая жажда', desc: 'Убил врага -> доп. атака в этот ход.' },
   { t: 'k', label: 'Неистовство', desc: 'Куб Стиля всегда чётный (нет факапов), но не взрывается.' },
-]);
-addRoad('sch_duel', 520, 300, 'dexterity', [
-  { t: 's', label: '+1 точность', mods: { 'Ближний бой (Точность)': 1 } },
-  { t: 's', label: '+1 Запугивание', mods: { Запугивание: 1 } },
-  { t: 'n', label: 'Вызов на дуэль', desc: 'Цель атакует только тебя 1 раунд.' },
-  { t: 'k', label: 'Придворная честь', desc: 'В дуэли 1 на 1 — +2 к попаданию и +1 рана.' },
-]);
-addRoad('sch_acrobatics', 300, 560, 'dexterity', [
-  { t: 's', label: '+1 Уклонение', mods: { Уклонение: 1 } },
-  { t: 's', label: '+1 Шаг', mods: { Шаг: 1 } },
-  { t: 'n', label: 'Поток ци', desc: '+1 удар в серии ци за ранг Квеля.' },
-  { t: 'k', label: 'Железное дыхание', desc: 'Раз за бой игнорируй 1 рану от безоружной атаки.' },
-]);
-addRoad('sch_pero', 540, 600, 'dexterity', [
-  { t: 's', label: '+1 Печати', mods: { Печати: 1 } },
-  { t: 's', label: '+1 История', mods: { История: 1 } },
-  { t: 'n', label: 'Быстрое черчение', desc: 'Охт-печать бонусным действием (1/ход).' },
-  { t: 'k', label: 'Геометрия клана', desc: 'Раз за отдых объедини 2 печати Уур.' },
 ]);
 addRoad('sch_duel', 520, 300, 'dexterity', [
   { t: 's', label: '+1 точность', mods: { 'Ближний бой (Точность)': 1 } },
@@ -281,6 +272,9 @@ addRoad('sch_cybernetics', 180, 420, 'dexterity', [
   { t: 'n', label: 'Тепловизор', desc: 'Фокус: видишь тепло сквозь дым и лёгкие укрытия.' },
   { t: 'k', label: 'Полный разгон', desc: 'Раз за бой удвой шаг и 2 быстрые атаки; после — усталость 3.' },
 ]);
+
+// Сетка: без наложений; слоты Черт/Ремёсел остаются в своих колоннах.
+packNodesToGrid(nodes);
 
 // Рёбра выводим автоматически из parentIds
 const edges: SkillEdge[] = [];

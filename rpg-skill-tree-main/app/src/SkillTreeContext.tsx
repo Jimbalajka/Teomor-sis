@@ -11,7 +11,6 @@ import type { SkillNode, SkillTreeData, SkillTreeState, ZoneType } from './types
 import type { PlaytestPreset } from './playtestPresets';
 import { migrateLegacyPoints } from './types';
 import { initialSkillTree } from './skillTreeData';
-import { TREE_BUILD } from './buildInfo';
 import { blockReason } from './nodeStatus';
 import { raceById } from './races';
 import { backgroundById } from './backgrounds';
@@ -25,7 +24,7 @@ import {
 } from './coreRules';
 
 const LS_STATE = 'teomor_skill_tree_state_v4';
-const LS_DATA = 'teomor_skill_tree_data_v8';
+const LS_DATA = 'teomor_skill_tree_data_v9';
 
 
 const defaultState: SkillTreeState = {
@@ -267,7 +266,7 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
         armorBonus: p.armorBonus ?? 0,
         discoveredSecrets: [],
         nodeChoices: p.nodeChoices ?? {},
-        raceChoices: {},
+        raceChoices: p.raceChoices ?? {},
       };
       if (p.sheetFields) {
         localStorage.setItem('teomor_sheet_v1', JSON.stringify(p.sheetFields));
@@ -341,16 +340,8 @@ function loadState(): SkillTreeState {
 
 function loadTree(): SkillTreeData {
   try {
-    // Сброс устаревшего древа из localStorage после обновления билда
-    for (const legacy of ['teomor_skill_tree_data_v6', 'teomor_skill_tree_data_v5', 'teomor_skill_tree_data_v4']) {
-      localStorage.removeItem(legacy);
-    }
-    const build = localStorage.getItem('teomor_tree_build');
     const raw = localStorage.getItem(LS_DATA);
-    if (!raw || build !== TREE_BUILD) {
-      localStorage.setItem('teomor_tree_build', TREE_BUILD);
-      return initialSkillTree;
-    }
+    if (!raw) return initialSkillTree;
     const parsed = JSON.parse(raw) as SkillTreeData;
     if (parsed?.nodes && parsed?.edges) {
       return {
@@ -367,12 +358,20 @@ function loadTree(): SkillTreeData {
   }
 }
 
-/** Ощутимый бонус за уровень Дара (1–10): +1 к ключевой характеристике за каждый уровень. */
+/** За уровень Дара (1–10): +1 к ключевой характеристике. */
 const DAR_LEVEL_STAT: Partial<Record<ZoneType, string>> = {
   magic: 'Разум',
   strength: 'Мощь',
   dexterity: 'Моторика',
   wisdom: 'Стержень',
+};
+
+/** Каждые 2 уровня Дара — +1 к «главному» навыку ветки (бодрая прогрессия). */
+const DAR_SIGNATURE_SKILL: Partial<Record<ZoneType, string>> = {
+  magic: 'Волшебство',
+  strength: 'Ближний бой (Мощь)',
+  dexterity: 'Дальний бой',
+  wisdom: 'Колдовство',
 };
 
 function computeTotals(
@@ -408,10 +407,11 @@ function computeTotals(
   }
   for (const [zone, stat] of Object.entries(DAR_LEVEL_STAT) as [ZoneType, string][]) {
     const darLvl = state.specializationLevels[zone] ?? 0;
-    if (darLvl > 0 && stat) {
-      totals[stat] = (totals[stat] ?? 0) + darLvl;
-      totals['Усталость'] = (totals['Усталость'] ?? 0) + Math.floor(darLvl / 3);
-    }
+    if (darLvl <= 0) continue;
+    if (stat) totals[stat] = (totals[stat] ?? 0) + darLvl;
+    totals['Усталость'] = (totals['Усталость'] ?? 0) + Math.floor(darLvl / 3);
+    const sig = DAR_SIGNATURE_SKILL[zone];
+    if (sig) totals[sig] = (totals[sig] ?? 0) + Math.floor(darLvl / 2);
   }
   return totals;
 }

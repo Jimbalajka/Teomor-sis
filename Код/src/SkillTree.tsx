@@ -17,9 +17,8 @@ import { EditorPanel } from './EditorPanel';
 import { RaceModal } from './RaceModal';
 import { ChoiceModal } from './ChoiceModal';
 import { getNodeStatus } from './nodeStatus';
-import { SkillTreeToolbar } from './SkillTreeToolbar';
-import { isEdgeOnRoute } from './treeView';
 import type { SkillNode, SkillTreeData, ZoneType } from './types';
+import { TREE_CELL, snapToGrid } from './treeLayout';
 
 const nodeTypes = { skill: CustomSkillNode };
 const edgeTypes = { floating: TreeFloatingEdge };
@@ -42,14 +41,7 @@ function buildNodes(treeData: SkillTreeData): Node[] {
 }
 
 export function SkillTree({ editMode }: { editMode: boolean }) {
-  const {
-    treeData,
-    setTreeData,
-    state,
-    dispatch,
-    showRouteHighlight,
-    routeHighlight,
-  } = useSkillTree();
+  const { treeData, setTreeData, state, dispatch } = useSkillTree();
   const [nodes, setNodes, onNodesChange] = useNodesState(buildNodes(treeData));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showRaceModal, setShowRaceModal] = useState(false);
@@ -67,25 +59,21 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         const targetStatus = target ? getNodeStatus(target, state, treeData) : 'locked';
         const targetUnlocked = state.allocatedNodes.includes(e.to);
         const color = target ? zoneEdgeColor[target.zone] : '#9ca3af';
-        const onRoute =
-          showRouteHighlight && isEdgeOnRoute(e.from, e.to, routeHighlight);
-        const dimRoute = showRouteHighlight && routeHighlight.size > 0 && !onRoute;
         return {
           id: `${e.from}-${e.to}`,
           source: e.from,
           target: e.to,
           type: 'floating',
-          animated: !showRouteHighlight && targetStatus === 'available',
-          className: onRoute ? 'edge-route' : dimRoute ? 'edge-dimmed' : undefined,
+          animated: targetStatus === 'available',
           style: {
-            stroke: onRoute ? '#facc15' : targetUnlocked ? color : '#4b5563',
-            strokeWidth: onRoute ? 3.5 : targetUnlocked ? 2.5 : 1,
-            strokeDasharray: targetUnlocked || onRoute ? undefined : '6 6',
-            opacity: dimRoute ? 0.12 : 1,
+            stroke: targetUnlocked ? color : '#4b5563',
+            strokeWidth: targetUnlocked ? 3 : 1.5,
+            strokeDasharray: targetUnlocked ? undefined : '6 6',
+            filter: targetUnlocked ? `drop-shadow(0 0 4px ${color})` : undefined,
           },
         };
       }),
-    [treeData, state, showRouteHighlight, routeHighlight],
+    [treeData, state],
   );
 
   const onNodeClick = useCallback(
@@ -119,19 +107,21 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
     [editMode, state, treeData, dispatch],
   );
 
-  // Сохранить новую позицию после перетаскивания.
+  // Сохранить позицию после перетаскивания — с привязкой к сетке.
   const onNodeDragStop = useCallback(
     (_: unknown, rfNode: Node) => {
+      const snapped = snapToGrid(rfNode.position.x, rfNode.position.y);
+      setNodes((prev) =>
+        prev.map((n) => (n.id === rfNode.id ? { ...n, position: snapped } : n)),
+      );
       setTreeData((prev) => ({
         ...prev,
         nodes: prev.nodes.map((n) =>
-          n.id === rfNode.id
-            ? { ...n, x: Math.round(rfNode.position.x), y: Math.round(rfNode.position.y) }
-            : n,
+          n.id === rfNode.id ? { ...n, x: snapped.x, y: snapped.y } : n,
         ),
       }));
     },
-    [setTreeData],
+    [setTreeData, setNodes],
   );
 
   // Создать связь (родитель -> потомок).
@@ -166,14 +156,6 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
   );
 
   return (
-    <div className="tree-canvas-wrap">
-      <SkillTreeToolbar />
-      <div className="tree-zone-legend">
-        <span className="legend-magic">◆ Медведь · Разум</span>
-        <span className="legend-strength">◆ Зюбания · Сила</span>
-        <span className="legend-dexterity">◆ Змей · Ловкость</span>
-        <span className="legend-wisdom">◆ Голубь · Мудрость</span>
-      </div>
     <div className={editMode ? 'rf-wrap rf-edit' : 'rf-wrap'}>
       <ReactFlow
         nodes={nodes}
@@ -188,12 +170,11 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         nodesConnectable={editMode}
         elementsSelectable={editMode}
         fitView
-        fitViewOptions={{ padding: 0.15, maxZoom: 1.1 }}
         minZoom={0.2}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
       >
-        <Background color="#1f2937" gap={28} />
+        <Background color="#1f2937" gap={TREE_CELL} size={1} />
         <Controls showInteractive={false} />
         <MiniMap
           pannable
@@ -212,7 +193,6 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
       {choiceNode && (
         <ChoiceModal node={choiceNode} onClose={() => setChoiceNode(null)} />
       )}
-    </div>
     </div>
   );
 }

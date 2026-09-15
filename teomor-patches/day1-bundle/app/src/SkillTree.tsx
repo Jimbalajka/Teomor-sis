@@ -18,6 +18,7 @@ import { RaceModal } from './RaceModal';
 import { ChoiceModal } from './ChoiceModal';
 import { getNodeStatus } from './nodeStatus';
 import type { SkillNode, SkillTreeData, ZoneType } from './types';
+import { TREE_CELL, snapToGrid } from './treeLayout';
 
 const nodeTypes = { skill: CustomSkillNode };
 const edgeTypes = { floating: TreeFloatingEdge };
@@ -106,19 +107,21 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
     [editMode, state, treeData, dispatch],
   );
 
-  // Сохранить новую позицию после перетаскивания.
+  // Сохранить позицию после перетаскивания — с привязкой к сетке.
   const onNodeDragStop = useCallback(
     (_: unknown, rfNode: Node) => {
+      const snapped = snapToGrid(rfNode.position.x, rfNode.position.y);
+      setNodes((prev) =>
+        prev.map((n) => (n.id === rfNode.id ? { ...n, position: snapped } : n)),
+      );
       setTreeData((prev) => ({
         ...prev,
         nodes: prev.nodes.map((n) =>
-          n.id === rfNode.id
-            ? { ...n, x: Math.round(rfNode.position.x), y: Math.round(rfNode.position.y) }
-            : n,
+          n.id === rfNode.id ? { ...n, x: snapped.x, y: snapped.y } : n,
         ),
       }));
     },
-    [setTreeData],
+    [setTreeData, setNodes],
   );
 
   // Создать связь (родитель -> потомок).
@@ -171,7 +174,7 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
       >
-        <Background color="#1f2937" gap={28} />
+        <Background color="#1f2937" gap={TREE_CELL} size={1} />
         <Controls showInteractive={false} />
         <MiniMap
           pannable
