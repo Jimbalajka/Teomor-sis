@@ -12,6 +12,7 @@ import type { SkillNode, SkillTreeData, SkillTreeState, ZoneType } from './types
 import type { PlaytestPreset } from './playtestPresets';
 import { migrateLegacyPoints } from './types';
 import { initialSkillTree } from './skillTreeData';
+import { applyPoeLayout } from './treeLayout';
 import { blockReason } from './nodeStatus';
 import { raceById } from './races';
 import { backgroundById } from './backgrounds';
@@ -26,7 +27,7 @@ import {
 } from './coreRules';
 
 const LS_STATE = 'teomor_skill_tree_state_v4';
-const LS_DATA = 'teomor_skill_tree_data_v24';
+const LS_DATA = 'teomor_skill_tree_data_v25';
 
 
 const defaultState: SkillTreeState = {
@@ -352,13 +353,14 @@ function loadTree(): SkillTreeData {
     if (!raw) return initialSkillTree;
     const parsed = JSON.parse(raw) as SkillTreeData;
     if (parsed?.nodes && parsed?.edges) {
-      return {
-        ...parsed,
-        nodes: parsed.nodes.map((n) => ({
+      // Всегда пересчитываем позиции — иначе рамки гексов разъезжаются с LS.
+      const nodes = applyPoeLayout(
+        parsed.nodes.map((n) => ({
           ...n,
           cost: { type: 'OR' as const, amount: n.cost?.amount ?? 1 },
         })),
-      };
+      );
+      return { ...parsed, nodes };
     }
     return initialSkillTree;
   } catch {

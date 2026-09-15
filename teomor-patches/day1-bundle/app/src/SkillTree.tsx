@@ -41,7 +41,8 @@ function buildNodes(treeData: SkillTreeData): Node[] {
   const frames = getClusterFrames().map((f) => ({
     id: f.id,
     type: 'clusterFrame' as const,
-    position: { x: f.cx - f.r, y: f.cy - f.r },
+    // nodeOrigin [0.5,0.5] — position = центр рамки = центр хаба
+    position: { x: f.cx, y: f.cy },
     data: {
       kind: f.kind,
       r: f.r,
