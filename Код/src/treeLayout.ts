@@ -1,18 +1,20 @@
 import type { SkillNode, ZoneType } from './types';
 
 /**
- * PoE-модель: членство в кластере, не дерево по parentIds.
- * Школа → гекс (центр). Профессии/навыки → слоты орбиты.
- * Хвосты → ромбы вокруг гекса. Без столбиков-сирот.
+ * PoE-модель:
+ *   школа      → центр ГЕКСА, на кольце — навыки школы
+ *   суб-проф.  → центр своего РОМБА (не слот на гексе школы)
+ *   углубления → углы ромба / следующие ромбы по тому же лучу
  */
 const CELL = 200;
 const SNAP = 20;
 
-const DAR_OUT = CELL * 1.35;
-const SECTOR_OUT = CELL * 5.2;
+const DAR_OUT = CELL * 1.5;
+const SECTOR_OUT = CELL * 7.0;
 const HEX_R = CELL * 2.15;
-const DEEP_OUT = CELL * 4.6;
-const DEEP_OUT2 = CELL * 8.2;
+/** Орбита центров ромбов-профессий вокруг гекса школы. */
+const PROF_OUT = CELL * 5.4;
+const PROF_OUT2 = CELL * 9.2;
 const DIA_R = CELL * 1.55;
 const HEX_PAD = 62;
 const DIA_PAD = 52;
@@ -113,10 +115,8 @@ function isProfessionHub(n: SkillNode): boolean {
   return false;
 }
 
-/** Чем меньше — тем раньше на кольцо гекса. */
 function packPriority(n: SkillNode): number {
-  if (isProfessionHub(n)) return 0;
-  if (n.category === 'transit_specialized') return 1;
+  if (n.category === 'transit_specialized' && !isProfessionHub(n)) return 1;
   if (n.id.startsWith('ts_')) return 2;
   if (n.id.startsWith('cyb_') || n.id.startsWith('imp_')) return 3;
   if (n.category === 'feat') return 4;
@@ -133,11 +133,11 @@ function sortPack(a: SkillNode, b: SkillNode): number {
   return a.id.localeCompare(b.id);
 }
 
-function footprintAlong(memberCount: number): number {
-  if (memberCount <= 6) return CELL * 6.5;
-  if (memberCount <= 12) return CELL * 9.5;
-  if (memberCount <= 20) return CELL * 13;
-  return CELL * 16;
+/** Ширина сектора школы с учётом ромбов профессий вокруг. */
+function footprintAlong(memberCount: number, profCount: number): number {
+  const byProfs = profCount <= 0 ? CELL * 7 : CELL * 7 + profCount * CELL * 3.2;
+  const byMembers = CELL * 6 + memberCount * CELL * 0.45;
+  return Math.max(byProfs, byMembers, CELL * 8);
 }
 
 function collectDescendants(
@@ -152,7 +152,6 @@ function collectDescendants(
     const n = q.shift()!;
     if (seen.has(n.id)) continue;
     seen.add(n.id);
-    // Уже занятые узлы не берём, но через них всё равно идём к детям
     if (!allow(n)) {
       q.push(...(childrenOf.get(n.id) ?? []));
       continue;
@@ -251,8 +250,8 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
     });
   };
 
-  /** Упаковать мешок в заполненные ромбы (≥2 на кольце, иначе без рамки). */
-  const packDiamonds = (
+  /** Остаток навыков школы — в ромбы по свободным углам (не профессии). */
+  const packSkillDiamonds = (
     bagIn: SkillNode[],
     ox: number,
     oy: number,
@@ -265,46 +264,30 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
 
     let wave = 0;
     let di = 0;
-    const placeAt = (slot: number, waveN: number) => {
-      const a = orbitAngle('hex', slot) + (waveN > 0 ? 0.22 * (di % 2 === 0 ? 1 : -1) : 0);
-      const rNow = waveN === 0 ? DEEP_OUT : DEEP_OUT2 + (waveN - 1) * (DIA_R * 2 + CELL);
-      return {
-        x: ox + Math.round(Math.cos(a) * rNow),
-        y: oy + Math.round(Math.sin(a) * rNow),
-        slot,
-      };
-    };
-
     while (bag.length) {
-      const slot =
-        preferSlots.length > 0
-          ? preferSlots[di % preferSlots.length]
-          : di % 6;
-      if (preferSlots.length > 0 && di > 0 && di % preferSlots.length === 0) wave += 1;
-      if (preferSlots.length === 0 && di > 0 && di % 6 === 0) wave += 1;
-      const { x, y } = placeAt(slot, wave);
+      const slot = preferSlots.length ? preferSlots[di % preferSlots.length] : di % 6;
+      if (preferSlots.length && di > 0 && di % preferSlots.length === 0) wave += 1;
+      if (!preferSlots.length && di > 0 && di % 6 === 0) wave += 1;
 
-      // Один узел — просто точка на орбите, без пустой рамки
+      const a = orbitAngle('hex', slot) + (wave > 0 ? 0.2 * (di % 2 === 0 ? 1 : -1) : 0);
+      const rNow = wave === 0 ? PROF_OUT : PROF_OUT2 + (wave - 1) * (DIA_R * 2 + CELL);
+      const x = ox + Math.round(Math.cos(a) * rNow);
+      const y = oy + Math.round(Math.sin(a) * rNow);
+
       if (bag.length === 1) {
-        const n = bag.shift()!;
-        put(n.id, x, y);
-        di += 1;
+        put(bag.shift()!.id, x, y);
         break;
       }
-
-      // Два узла — мини-пара без ромба (рамка на 1 слот выглядит дырявой)
       if (bag.length === 2) {
-        const a = bag.shift()!;
-        const b = bag.shift()!;
-        put(a.id, x, y);
+        const aN = bag.shift()!;
+        const bN = bag.shift()!;
+        put(aN.id, x, y);
         const off = orbitPos('diamond', 0, DIA_R);
-        put(b.id, x + off.x, y + off.y);
-        di += 1;
+        put(bN.id, x + off.x, y + off.y);
         break;
       }
 
       const hub = bag.shift()!;
-      // Берём 4, но если остаток после этого будет 1 — лучше взять 3 и оставить 2 на пару
       let take = Math.min(4, bag.length);
       if (bag.length - take === 1) take = Math.min(3, bag.length);
       const ring = bag.splice(0, take);
@@ -353,9 +336,8 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
       .sort(sortPack);
 
   /**
-   * Школа = гекс. На кольцо: профессии, потом транзиты/навыки.
-   * Глубокие ветки профессий → ромбы в их слотах.
-   * Остаток → ромбы вокруг.
+   * Школа = гекс (на кольце только навыки школы).
+   * Каждая суб-профессия = центр СВОЕГО ромба на орбите.
    */
   const packSchool = (
     school: SkillNode,
@@ -365,53 +347,80 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
     zone: BoardZone,
     sideSign: number,
   ) => {
-    const profs = members.filter(isProfessionHub);
-    const skills = members.filter((n) => !isProfessionHub(n));
+    const profs = members.filter(isProfessionHub).sort((a, b) => a.id.localeCompare(b.id));
+    const skills = members.filter((n) => !isProfessionHub(n)).sort(sortPack);
 
-    const ring: SkillNode[] = [];
+    const underProf = new Set<string>();
+    const descByProf = new Map<string, SkillNode[]>();
     for (const p of profs) {
-      if (ring.length >= 6) break;
-      ring.push(p);
-    }
-    for (const s of skills) {
-      if (ring.length >= 6) break;
-      ring.push(s);
-    }
-
-    const onRing = stampHex(school, cx, cy, zone, ring);
-    const used = new Set(onRing.map((n) => n.id));
-    used.add(school.id);
-
-    const rest: SkillNode[] = [];
-    for (const p of profs) if (!used.has(p.id)) rest.push(p);
-    for (const s of skills) if (!used.has(s.id)) rest.push(s);
-
-    const deepSlots: number[] = [];
-    onRing.forEach((ringNode, slot) => {
-      if (!isProfessionHub(ringNode)) return;
-      const desc = collectDescendants(ringNode.id, childrenOf, (n) => {
-        if (used.has(n.id) || pos.has(n.id)) return false;
-        if (isProfessionHub(n)) return false;
-        if (n.category === 'subcategory') return false;
+      const desc = collectDescendants(p.id, childrenOf, (n) => {
+        if (isProfessionHub(n) || n.category === 'subcategory') return false;
         return resolveSchoolId(n, byId, schoolCache) === school.id;
       }).sort(sortPack);
+      descByProf.set(p.id, desc);
+      for (const d of desc) underProf.add(d.id);
+    }
 
-      // Личный ромб только если ветка жирная — иначе сливается в общий мешок
-      if (desc.length < 4) return;
-      const take = desc.filter((d) => rest.some((r) => r.id === d.id));
-      if (take.length < 4) return;
-      for (const t of take) {
-        const idx = rest.findIndex((r) => r.id === t.id);
-        if (idx >= 0) rest.splice(idx, 1);
+    const schoolSkills = skills.filter((s) => !underProf.has(s.id));
+    const ring = schoolSkills.slice(0, 6);
+    stampHex(school, cx, cy, zone, ring);
+    const restSchool = schoolSkills.slice(6).filter((n) => !pos.has(n.id));
+
+    // Суб-профессии — равномерно по кругу, каждая центр ромба
+    const nProf = profs.length;
+    const usedSlots = new Set<number>();
+    profs.forEach((prof, i) => {
+      const a =
+        nProf <= 1
+          ? -Math.PI / 2 + sideSign * 0.35
+          : -Math.PI / 2 + (i / nProf) * Math.PI * 2 + sideSign * 0.08;
+      const wave = 0;
+      const r = PROF_OUT + wave * (PROF_OUT2 - PROF_OUT);
+      const dx = cx + Math.round(Math.cos(a) * r);
+      const dy = cy + Math.round(Math.sin(a) * r);
+
+      const desc = (descByProf.get(prof.id) ?? []).filter((d) => !pos.has(d.id));
+      const onRing = desc.slice(0, 4);
+      stampDiamond(prof, onRing, dx, dy, zone, `dia_prof_${prof.id}`);
+
+      // Переполнение ветки — дальше по тому же лучу
+      let overflow = desc.slice(4);
+      let w = 1;
+      while (overflow.length) {
+        if (overflow.length <= 2) {
+          const ox = cx + Math.round(Math.cos(a) * (PROF_OUT2 + (w - 1) * (DIA_R * 2 + CELL)));
+          const oy = cy + Math.round(Math.sin(a) * (PROF_OUT2 + (w - 1) * (DIA_R * 2 + CELL)));
+          if (overflow.length === 1) {
+            put(overflow.shift()!.id, ox, oy);
+          } else {
+            const aN = overflow.shift()!;
+            const bN = overflow.shift()!;
+            put(aN.id, ox, oy);
+            const off = orbitPos('diamond', 0, DIA_R);
+            put(bN.id, ox + off.x, oy + off.y);
+          }
+          break;
+        }
+        const hub = overflow.shift()!;
+        let take = Math.min(4, overflow.length);
+        if (overflow.length - take === 1) take = Math.min(3, overflow.length);
+        const ring2 = overflow.splice(0, take);
+        const ox = cx + Math.round(Math.cos(a) * (PROF_OUT2 + (w - 1) * (DIA_R * 2 + CELL)));
+        const oy = cy + Math.round(Math.sin(a) * (PROF_OUT2 + (w - 1) * (DIA_R * 2 + CELL)));
+        stampDiamond(hub, ring2, ox, oy, zone, `dia_prof_${prof.id}_w${w}`);
+        w += 1;
       }
-      packDiamonds(take, cx, cy, zone, `${school.id}_${ringNode.id}`, [slot]);
-      deepSlots.push(slot);
+
+      // Занять ближайший hex-slot, чтобы school-skill ромбы не сели сверху
+      const nearestSlot = ((Math.round(((a + Math.PI / 2) / (Math.PI / 3)) % 6) % 6) + 6) % 6;
+      usedSlots.add(nearestSlot);
     });
 
-    const freeSlots = [0, 1, 2, 3, 4, 5].filter((s) => !deepSlots.includes(s));
-    const prefer = freeSlots.length ? freeSlots : [0, 1, 2, 3, 4, 5];
-    const rotated = prefer.map((s) => (s + (sideSign < 0 ? 3 : 0)) % 6);
-    packDiamonds(rest.sort(sortPack), cx, cy, zone, school.id, rotated);
+    const freeSlots = [0, 1, 2, 3, 4, 5].filter((s) => !usedSlots.has(s));
+    const prefer = (freeSlots.length ? freeSlots : [0, 1, 2, 3, 4, 5]).map(
+      (s) => (s + (sideSign < 0 ? 3 : 0)) % 6,
+    );
+    packSkillDiamonds(restSchool, cx, cy, zone, school.id, prefer);
   };
 
   for (const zone of ['magic', 'strength', 'dexterity', 'wisdom'] as const) {
@@ -425,20 +434,27 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
       put(spec.id, p.x, p.y);
     }
 
-    const schoolMembers = schools.map((s) => ({
-      school: s,
-      members: membersOfSchool(s.id),
-    }));
-    const footprints = schoolMembers.map((s) => footprintAlong(s.members.length));
-    const total = footprints.reduce((a, b) => a + b, 0);
+    const schoolMembers = schools.map((s) => {
+      const members = membersOfSchool(s.id);
+      return {
+        school: s,
+        members,
+        profs: members.filter(isProfessionHub).length,
+      };
+    });
+    const footprints = schoolMembers.map((s) => footprintAlong(s.members.length, s.profs));
+    // Зазор между школами
+    const GAP = CELL * 2.5;
+    const total = footprints.reduce((a, b) => a + b, 0) + GAP * Math.max(0, schools.length - 1);
     let cursor = -total / 2;
 
-    schoolMembers.forEach(({ school, members }, si) => {
+    schoolMembers.forEach(({ school, members, profs }, si) => {
       const fp = footprints[si];
       const along = cursor + fp / 2;
-      cursor += fp;
+      cursor += fp + GAP;
       const side = along === 0 ? 1 : Math.sign(along) || 1;
-      const pushOut = members.length > 14 ? CELL * 2.4 : members.length > 8 ? CELL * 1.2 : 0;
+      const pushOut =
+        members.length > 14 || profs >= 4 ? CELL * 3.2 : members.length > 8 || profs >= 2 ? CELL * 1.6 : 0;
       const hp = zonePoint(zone, SECTOR_OUT + pushOut, along);
       packSchool(school, members, hp.x, hp.y, zone, side);
     });
@@ -451,16 +467,15 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
       return true;
     });
     if (zoneOrphans.length) {
-      const outward = zonePoint(zone, DAR_OUT + CELL * 3.2, 0);
-      packDiamonds(zoneOrphans.sort(sortPack), outward.x, outward.y, zone, `orphan_${zone}`, [0, 1, 2, 3]);
+      const outward = zonePoint(zone, DAR_OUT + CELL * 4.0, 0);
+      packSkillDiamonds(zoneOrphans.sort(sortPack), outward.x, outward.y, zone, `orphan_${zone}`, [
+        0, 1, 2, 3,
+      ]);
     }
   }
 
   const still = nodes.filter(
-    (n) =>
-      !pos.has(n.id) &&
-      n.category !== 'feat_slot' &&
-      n.category !== 'craft_slot',
+    (n) => !pos.has(n.id) && n.category !== 'feat_slot' && n.category !== 'craft_slot',
   );
   if (still.length) {
     const byZone = new Map<ZoneType, SkillNode[]>();
@@ -473,14 +488,14 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
         bag.forEach((n, i) => put(n.id, (i - bag.length / 2) * CELL, CELL * 3.5, false));
         continue;
       }
-      const p = zonePoint(zone, SECTOR_OUT + CELL * 10, 0);
-      packDiamonds(bag.sort(sortPack), p.x, p.y, zone, `rescue_${zone}`, [0, 1, 2, 3, 4, 5]);
+      const p = zonePoint(zone, SECTOR_OUT + CELL * 14, 0);
+      packSkillDiamonds(bag.sort(sortPack), p.x, p.y, zone, `rescue_${zone}`, [0, 1, 2, 3, 4, 5]);
     }
   }
 
   let maxAbsX = 0;
   for (const p of pos.values()) maxAbsX = Math.max(maxAbsX, Math.abs(p.x));
-  const slotX = Math.max(CELL * 22, maxAbsX + CELL * 4);
+  const slotX = Math.max(CELL * 26, maxAbsX + CELL * 5);
   nodes
     .filter((n) => n.category === 'feat_slot')
     .sort((a, b) => a.id.localeCompare(b.id))
@@ -513,6 +528,7 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
     if (!moved) break;
   }
 
+  // Рамки: центр = финальная позиция хаба
   const byFinal = new Map(outNodes.map((n) => [n.id, n]));
   lastClusterFrames = draftFrames.map((f) => {
     const hub = byFinal.get(f.anchorIds[0]);

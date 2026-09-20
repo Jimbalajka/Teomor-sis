@@ -29,7 +29,7 @@ const nodeTypes = {
 };
 const edgeTypes = { floating: TreeFloatingEdge };
 
-const MAX_EDGE_LEN = 900; // длинные рёбра = паутина, прячем
+const MAX_EDGE_LEN = 1300; // длинные рёбра = паутина, прячем
 
 const zoneEdgeColor: Record<ZoneType, string> = {
   center: '#9ca3af',
