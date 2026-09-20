@@ -46,6 +46,7 @@
 - PR: `Jimbalajka/Teomor-sis`, токен в `.env`, не спрашивать.
 
 ### Текущее состояние (обновлять!)
+- **PR:** https://github.com/Jimbalajka/Teomor-sis/pull/35 (`feat/core-v3-kvel-mastery` → `main`)
 - **PR:** https://github.com/Jimbalajka/Teomor-sis/pull/24 (`feat/tree-fork-logic` → `main`)
 - **Локальная ветка agent:** `feat/tree-fork-logic`
 - **Канон кода:** `teomor-patches/Код/` → mirror `day1-bundle/app/src/`
@@ -58,9 +59,10 @@
 - **Канон:** `Код/` (npm run dev) + mirror `teomor-patches/day1-bundle/app/src/`
 
 ## Текущий PR
-- **#24** https://github.com/Jimbalajka/Teomor-sis/pull/24 — `feat/tree-fork-logic` → `main`
+- **#35** https://github.com/Jimbalajka/Teomor-sis/pull/35 — `feat/core-v3-kvel-mastery` → `main`
 
 ## Приоритет работ (сейчас)
+0. **Плейтест ядра v3** — \`v3/docs/CORE.md\`; древо-каркас в \`v3/code/\` (не ломать v2 UI)
 1. **Плейтест 3 перс.** — обновить пресеты под новые ID
 2. UI sidebar — по скринам
 3. Баланс позиций — `applyHighwayLayout` (шаг↑, слоты за |x|max), live URL в `docs/reference/teomor.md`
@@ -123,6 +125,7 @@
 - Не трогать пресеты пока не готова ветка
 
 ## Changelog
+- 2026-09-20: CORE v3 папка \`teomor-patches/v3/\` (квель+мастерство+к8); каркас древа v3; v2 не заменён
 - 2026-09-15: fork logic по эталону путей (placeExclusiveFork для всех exclusiveGroup); центр-компас; LS v17; PR #31
 - 2026-09-15: restore UI (treeFocus/route) + denser highway spacing; slots вне веток; LS v15; live https://teomor.acheaches.unstoppable-ai.site/0a95a994-teomor/
 - 2026-09-15: сетка древа — `treeLayout.ts` (CELL 160), pack без наложений; слоты Черт/Ремёсел вынесены; дубли addRoad убраны; LS_DATA v9
