@@ -59,7 +59,7 @@
 - **Канон:** `Код/` (npm run dev) + mirror `teomor-patches/day1-bundle/app/src/`
 
 ## Текущий PR
-- **#35** https://github.com/Jimbalajka/Teomor-sis/pull/35 — `feat/core-v3-kvel-mastery` → `main`
+- **#37** https://github.com/Jimbalajka/Teomor-sis/pull/37 — `feat/tree-cluster-slots` → `main`
 
 ## Приоритет работ (сейчас)
 0. **Плейтест ядра v3** — \`v3/docs/CORE.md\`; древо-каркас в \`v3/code/\` (не ломать v2 UI)
