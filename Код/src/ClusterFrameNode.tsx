@@ -51,9 +51,9 @@ export function ClusterFrameNode({ data }: NodeProps) {
       <svg width={size} height={size} className="cluster-frame-svg">
         <polygon
           points={points}
-          fill={`${stroke}14`}
+          fill={`${stroke}22`}
           stroke={stroke}
-          strokeWidth={kind === 'hex' ? 2.5 : 2}
+          strokeWidth={kind === 'hex' ? 3.5 : 2.75}
           strokeDasharray={kind === 'diamond' ? '6 4' : undefined}
           strokeLinejoin="round"
         />
@@ -63,7 +63,7 @@ export function ClusterFrameNode({ data }: NodeProps) {
             fill="none"
             stroke={stroke}
             strokeWidth={1}
-            opacity={0.35}
+            opacity={0.5}
           />
         )}
       </svg>
