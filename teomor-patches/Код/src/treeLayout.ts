@@ -5,17 +5,17 @@ import type { SkillNode, ZoneType } from './types';
  * hex  = профессия (центр + до 6 навыков)
  * diamond = углубление (центр + до 4 навыков)
  */
-const CELL = 180;
+const CELL = 200;
 const SNAP = 20;
 
 const DAR_OUT = CELL * 1.2;
 const SECTOR_OUT = CELL * 4.0;
-const SECTOR_GAP = CELL * 6.5;
+const SECTOR_GAP = CELL * 8.0;
 const HEX_OUT = CELL * 4.2;
-const HEX_GAP = CELL * 6.0;
-const HEX_R = CELL * 1.5;
-const DEEP_OUT = CELL * 3.6;
-const DIA_R = CELL * 1.2;
+const HEX_GAP = CELL * 7.5;
+const HEX_R = CELL * 2.1;
+const DEEP_OUT = CELL * 4.4;
+const DIA_R = CELL * 1.55;
 const HEX_PAD = 58;
 const DIA_PAD = 50;
 
@@ -340,17 +340,19 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
     });
   }
 
+  // Хвосты — только концентрические орбиты вокруг родителя (никаких столбиков)
+  const orphanIdx = new Map<string, number>();
   for (const n of topoOrder(nodes)) {
     if (pos.has(n.id)) continue;
     if (n.category === 'feat_slot' || n.category === 'craft_slot') continue;
     const parentId = n.requirements?.parentIds?.[0];
     const pp = parentId ? pos.get(parentId) : undefined;
-    if (pp) {
-      const sibs = (childrenOf.get(parentId!) ?? []).filter(
-        (s) => !pos.has(s.id) || s.id === n.id,
-      );
-      const idx = Math.max(0, sibs.findIndex((s) => s.id === n.id));
-      const off = orbitPos('hex', idx, CELL * 1.05);
+    if (pp && parentId) {
+      const idx = orphanIdx.get(parentId) ?? 0;
+      orphanIdx.set(parentId, idx + 1);
+      const ring = Math.floor(idx / 6) + 1;
+      const slot = idx % 6;
+      const off = orbitPos('hex', slot, CELL * (1.15 + ring * 0.95));
       put(n.id, pp.x + off.x, pp.y + off.y, false);
       continue;
     }

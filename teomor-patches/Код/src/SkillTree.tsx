@@ -29,6 +29,8 @@ const nodeTypes = {
 };
 const edgeTypes = { floating: TreeFloatingEdge };
 
+const MAX_EDGE_LEN = 900; // длинные рёбра = паутина, прячем
+
 const zoneEdgeColor: Record<ZoneType, string> = {
   center: '#9ca3af',
   magic: '#3b82f6',
@@ -96,8 +98,14 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         const dimRoute = showRouteHighlight && routeHighlight.size > 0 && !onRoute;
         const linked =
           !!hoverNodeId && (e.from === hoverNodeId || e.to === hoverNodeId);
+        const a = treeData.nodes.find((n) => n.id === e.from);
+        const b = target;
+        const dist =
+          a && b ? Math.hypot((a.x ?? 0) - (b.x ?? 0), (a.y ?? 0) - (b.y ?? 0)) : 0;
+        const tooLong = dist > MAX_EDGE_LEN;
         return {
           id: `${e.from}-${e.to}`,
+          hidden: tooLong,
           source: e.from,
           target: e.to,
           type: 'floating',
