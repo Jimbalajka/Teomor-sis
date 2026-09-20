@@ -18,7 +18,7 @@ computing gzip size...
 dist/index.html                   0.45 kB │ gzip:   0.33 kB
 dist/assets/index-rjJ6zhM2.css   44.85 kB │ gzip:   8.59 kB
 dist/assets/index-C3i-5KvL.js   468.28 kB │ gzip: 153.45 kB
-✓ built in 3.95s |
+✓ built in 4.10s |
 | **Layout** | гекс/ромб + nodeOrigin 0.5 + центр-пути гексами; LS  |
 | **PR rule** | каждая пачка = новый PR |
 
