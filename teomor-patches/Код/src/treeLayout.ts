@@ -206,6 +206,74 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
   }
   for (const kids of childrenOf.values()) kids.sort((a, b) => a.id.localeCompare(b.id));
 
+  // ── Центр: три пути = мини-гексы, не вертикальные столбики road_* ──
+  const centerPaths = [
+    { id: 'g_path_mind', along: -1 },
+    { id: 'g_path_master', along: 0 },
+    { id: 'g_path_body', along: 1 },
+  ] as const;
+  const PATH_OUT = CELL * 2.4;
+  const PATH_ALONG = CELL * 2.8;
+  for (const { id, along } of centerPaths) {
+    if (!byId.has(id)) continue;
+    const hx = along * PATH_ALONG;
+    const hy = -PATH_OUT;
+    put(id, hx, hy, true);
+    const roads = (childrenOf.get(id) ?? [])
+      .filter((c) => c.id.startsWith('road_'))
+      .sort((a, b) => a.id.localeCompare(b.id));
+    // Соберём цепочку road_* в плоский список порядка
+    const chain: SkillNode[] = [];
+    const seen = new Set<string>();
+    let frontier = roads.filter((r) => (r.requirements?.parentIds ?? []).includes(id));
+    while (frontier.length) {
+      const n = frontier.shift()!;
+      if (seen.has(n.id)) continue;
+      seen.add(n.id);
+      chain.push(n);
+      for (const c of childrenOf.get(n.id) ?? []) {
+        if (c.id.startsWith('road_') && !seen.has(c.id)) frontier.push(c);
+      }
+    }
+    // На гекс — до 6 узлов пути
+    const onHex = chain.slice(0, 6);
+    onHex.forEach((n, i) => {
+      const off = hexOffset(i, HEX_R * 0.85);
+      put(n.id, hx + off.x, hy + off.y, true);
+    });
+    draftFrames.push({
+      id: `hex_center_${id}`,
+      kind: 'hex',
+      cx: hx,
+      cy: hy,
+      r: Math.round(HEX_R * 0.85 + HEX_FRAME_PAD),
+      zone: 'center',
+      label: byId.get(id)?.label,
+      anchorIds: [id, ...onHex.map((n) => n.id)],
+    });
+    // хвост пути — маленький ромб сбоку
+    const rest = chain.slice(6);
+    if (rest.length) {
+      const a = along >= 0 ? 0.4 : Math.PI - 0.4;
+      const cx = hx + Math.round(Math.cos(a) * DEEP_OUT * 0.85);
+      const cy = hy + Math.round(Math.sin(a) * DEEP_OUT * 0.85);
+      put(rest[0].id, cx, cy, true);
+      rest.slice(1, 5).forEach((n, i) => {
+        const off = diamondOffset(i, DIA_R * 0.9);
+        put(n.id, cx + off.x, cy + off.y, true);
+      });
+      draftFrames.push({
+        id: `dia_center_${id}`,
+        kind: 'diamond',
+        cx,
+        cy,
+        r: Math.round(DIA_R * 0.9 + DIA_FRAME_PAD),
+        zone: 'center',
+        anchorIds: rest.slice(0, 5).map((n) => n.id),
+      });
+    }
+  }
+
   const schoolCache = new Map<string, string | null>();
 
   const placeHexCluster = (
