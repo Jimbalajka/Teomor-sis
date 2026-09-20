@@ -55,6 +55,7 @@ export interface SkillNode {
   description?: string;
   /** Только один узел из группы может быть изучен (развилка билда). */
   exclusiveGroup?: string;
+  hub?: 'hex' | 'diamond';
 }
 
 export interface NodeChoiceOption {
