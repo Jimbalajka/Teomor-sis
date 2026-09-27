@@ -126,10 +126,7 @@ export function kvelFatigueCap(kvelRank: number): number {
   return KVEL_FATIGUE_CAP_BY_RANK[r];
 }
 
-/** Холодные слоты на героя: 3 (аура 1–4) / 4 (5–8) / 5 (9–10). */
+/** Холодные слоты = аура (1:1). */
 export function coldSlotsByAura(aura: number): number {
-  const a = Math.max(1, Math.min(10, Math.floor(aura)));
-  if (a <= 4) return 3;
-  if (a <= 8) return 4;
-  return 5;
+  return Math.max(1, Math.min(10, Math.floor(aura)));
 }
