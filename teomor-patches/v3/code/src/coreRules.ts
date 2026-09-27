@@ -126,20 +126,10 @@ export function kvelFatigueCap(kvelRank: number): number {
   return KVEL_FATIGUE_CAP_BY_RANK[r];
 }
 
-/** Общий пул холодных приёмов по ауре. */
-export const COLD_POOL_BY_AURA = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12] as const;
-
-export type ColdCapKind = 'wide' | 'medium' | 'hard';
-
-export function coldPoolByAura(aura: number): number {
+/** Холодные слоты на героя: 3 (аура 1–4) / 4 (5–8) / 5 (9–10). */
+export function coldSlotsByAura(aura: number): number {
   const a = Math.max(1, Math.min(10, Math.floor(aura)));
-  return COLD_POOL_BY_AURA[a];
-}
-
-/** Под-лимит холодных одного квеля при данной ауре. */
-export function kvelColdCap(kind: ColdCapKind, aura: number): number {
-  const pool = coldPoolByAura(aura);
-  if (kind === 'wide') return pool;
-  if (kind === 'hard') return Math.min(3, pool);
-  return Math.ceil(pool / 2);
+  if (a <= 4) return 3;
+  if (a <= 8) return 4;
+  return 5;
 }
