@@ -156,7 +156,7 @@ export function CharacterSheet() {
         {SKILL_GROUPS.map((group) => {
           const zone = zoneForChar(group.char)!;
           const gRank = giftRank(state, zone);
-          const gArrow = rankArrow(gRank, 'mastery');
+          const gCur = rankArrow(gRank, 'mastery').current;
           return (
             <section
               key={group.char}
@@ -165,7 +165,7 @@ export function CharacterSheet() {
               <header className="sheet-char">
                 <span className="sheet-char-name">{group.char}</span>
                 <span className="sheet-char-val" title="Ранг через прокачку дара">
-                  {gArrow.text}
+                  {gCur}
                 </span>
               </header>
               <ul className="sheet-skills">
@@ -174,12 +174,12 @@ export function CharacterSheet() {
                   const fromGrant = grants.skillRanks[s.name] ?? 0;
                   const rank = Math.max(fromTree.rank, fromGrant);
                   const kind = s.dice || fromTree.dice ? 'dice' : 'mastery';
-                  const arrow = rankArrow(rank, kind);
+                  const cur = rankArrow(rank, kind).current;
                   return (
                     <li key={s.name}>
                       <span className="sheet-skill-name">{s.name}</span>
-                      <span className="sheet-skill-val sheet-char-val" title={arrow.text}>
-                        {arrow.text}
+                      <span className="sheet-skill-val sheet-char-val" title={cur}>
+                        {cur}
                       </span>
                     </li>
                   );
