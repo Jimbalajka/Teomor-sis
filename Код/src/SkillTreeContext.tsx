@@ -14,8 +14,7 @@ import { migrateLegacyPoints } from './types';
 import { initialSkillTree, MASTERY_MAX } from './skillTreeData';
 import { applyPoeLayout, syncClusterFramesFromNodes } from './treeLayout';
 import { blockReason } from './nodeStatus';
-import { raceById } from './races';
-import { backgroundById } from './backgrounds';
+import { collectStartingGrants } from './grants';
 import { TREE_ECONOMY } from './treeEconomy';
 import { buildRouteNodeSet, type TreeFocus } from './treeView';
 import {
@@ -541,35 +540,14 @@ function loadTree(): SkillTreeData {
   };
 }
 
-/** Ощутимый бонус за уровень Дара (1–10): +1 к ключевой характеристике за каждый уровень. */
-const DAR_LEVEL_STAT: Partial<Record<ZoneType, string>> = {
-  magic: 'Разум',
-  strength: 'Мощь',
-  dexterity: 'Моторика',
-  wisdom: 'Стержень',
-};
-
 function computeTotals(
   state: SkillTreeState,
   treeData: SkillTreeData,
 ): Record<string, number> {
+  // Лист больше не живёт на «+N». Здесь только то, что ещё числовое (КБ/броня/ручное).
   const totals: Record<string, number> = {};
-  const race = raceById(state.race);
-  const bg = backgroundById(state.background);
-  for (const src of [race, bg]) {
-    if (!src) continue;
-    for (const [stat, val] of Object.entries(src.statModifiers)) {
-      totals[stat] = (totals[stat] ?? 0) + val;
-    }
-  }
-  if (race?.choices) {
-    for (const c of race.choices) {
-      const chosen = state.raceChoices[c.id];
-      if (c.kind === 'char' && chosen) {
-        totals[chosen] = (totals[chosen] ?? 0) + (c.amount ?? 1);
-      }
-    }
-  }
+  const grants = collectStartingGrants(state);
+  if (grants.armor) totals['Броня'] = (totals['Броня'] ?? 0) + grants.armor;
   for (const [stat, val] of Object.entries(state.manualModifiers ?? {})) {
     totals[stat] = (totals[stat] ?? 0) + val;
   }
@@ -577,14 +555,10 @@ function computeTotals(
     const node = treeData.nodes.find((n) => n.id === id);
     if (!node?.statModifiers) continue;
     for (const [stat, val] of Object.entries(node.statModifiers)) {
-      totals[stat] = (totals[stat] ?? 0) + val;
-    }
-  }
-  for (const [zone, stat] of Object.entries(DAR_LEVEL_STAT) as [ZoneType, string][]) {
-    const darLvl = state.specializationLevels[zone] ?? 0;
-    if (darLvl > 0 && stat) {
-      totals[stat] = (totals[stat] ?? 0) + darLvl;
-      totals['Усталость'] = (totals['Усталость'] ?? 0) + Math.floor(darLvl / 3);
+      // характеристики-«+» с узлов игнорим; броню/КБ оставляем
+      if (stat === 'Броня' || stat === 'КБ' || stat === 'Усталость') {
+        totals[stat] = (totals[stat] ?? 0) + val;
+      }
     }
   }
   return totals;

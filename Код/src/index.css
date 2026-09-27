@@ -127,9 +127,13 @@ body {
   text-align: center;
 }
 .node-level {
+  display: block;
+  margin-top: 2px;
   font-size: 10px;
-  color: var(--muted);
   font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0.92;
+  white-space: nowrap;
 }
 
 .node-root {
@@ -948,9 +952,10 @@ body {
   color: var(--zc, var(--text));
 }
 .sheet-char-val {
-  font-size: 18px;
-  font-weight: 800;
   font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+  font-weight: 700;
+  white-space: nowrap;
 }
 .sheet-skills {
   list-style: none;

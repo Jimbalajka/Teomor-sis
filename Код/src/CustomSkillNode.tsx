@@ -5,7 +5,9 @@ import { useSkillTree } from './SkillTreeContext';
 import { blockReason, getNodeStatus, isHiddenSecret } from './nodeStatus';
 import { nodeBonusLine, nodeVisualTier } from './nodeLabels';
 import { isNodeDimmed } from './treeView';
-import { MASTERY_TIERS_RU, SKILL_DICE_LADDER } from './skillTreeData';
+import { isDiceSkillId, rankArrow } from './ranks';
+import { collectStartingGrants } from './grants';
+import { MASTERY_MAX } from './skillTreeData';
 
 export type SkillNodeData = { node: SkillNode };
 
@@ -62,23 +64,20 @@ export function CustomSkillNode({ data }: NodeProps) {
       : state.allocatedNodes.includes(node.id)
         ? state.nodeLevels[node.id] ?? 1
         : 0;
-  const maxLvl = node.maxLevel ?? (node.category === 'specialization' ? MASTERY_TIERS_RU.length : 1);
-  const lvl = nodeLvl ?? 0;
+  const maxLvl = node.maxLevel ?? (node.category === 'specialization' ? MASTERY_MAX : 1);
+  const treeLvl = nodeLvl ?? 0;
+  const grantLvl =
+    node.category === 'specialization' ? 0 : collectStartingGrants(state).skillRanks[node.label] ?? 0;
+  const lvl = Math.max(treeLvl, grantLvl);
   const canUpgrade =
     status === 'unlocked' &&
     maxLvl > 1 &&
-    lvl > 0 &&
-    lvl < maxLvl;
-  const tierLabel = (() => {
-    if (!lvl || maxLvl <= 1) return null;
-    if (node.id.includes('_dice_')) {
-      return SKILL_DICE_LADDER[Math.min(lvl, SKILL_DICE_LADDER.length) - 1] ?? `${lvl}`;
-    }
-    if (maxLvl === MASTERY_TIERS_RU.length || node.category === 'specialization') {
-      return MASTERY_TIERS_RU[Math.min(lvl, MASTERY_TIERS_RU.length) - 1] ?? `${lvl}`;
-    }
-    return `${lvl}/${maxLvl}`;
-  })();
+    treeLvl > 0 &&
+    treeLvl < maxLvl;
+  const rankKind =
+    node.category === 'specialization' || !isDiceSkillId(node.id) ? 'mastery' : 'dice';
+  const tierLabel =
+    (node.maxLevel ?? 1) > 1 && lvl > 0 ? rankArrow(lvl, rankKind).text : null;
 
   const legend = nodeLegendRole(node);
 

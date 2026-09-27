@@ -94,7 +94,12 @@ export interface Race {
   name: string;
   blurb: string;
   speed: number;
+  /** @deprecated числовые «+» убраны с листа; см. skillRanks / proficiencies. */
   statModifiers: Record<string, number>;
+  /** Стартовые ранги навыков (1 = новичок / 1к4). */
+  skillRanks?: Record<string, number>;
+  /** Владения и заделы текстом (не «+N»). */
+  proficiencies?: string[];
   abilities: string[];
   choices?: RaceChoice[];
 }

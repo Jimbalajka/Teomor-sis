@@ -24,7 +24,7 @@ export function RaceModal({ onClose }: { onClose: () => void }) {
           <>
             <h2 className="modal-title">Шаг 1 — Раса</h2>
             <p className="modal-sub">
-              Выбери расу. Получишь её особенности, {TREE_ECONOMY.startOrPoints} ОР и 1 уровень.
+              Выбери расу. Получишь особенности расы (ранг/владение), {TREE_ECONOMY.startOrPoints} ОР.
             </p>
             <div className="race-grid">
               {races.map((r) => (
@@ -87,7 +87,7 @@ export function RaceModal({ onClose }: { onClose: () => void }) {
 
         {step === 'background' && (
           <>
-            <h2 className="modal-title">Шаг 3 — Предыстория</h2>
+            <h2 className="modal-title">Шаг 3 — Предыстория (ранг навыка или владение)</h2>
             <p className="modal-sub">
               Даёт владения навыками (не характеристиками).
             </p>
