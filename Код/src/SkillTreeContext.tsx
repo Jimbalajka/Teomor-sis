@@ -11,7 +11,7 @@ import {
 import type { SkillNode, SkillTreeData, SkillTreeState, ZoneType } from './types';
 import type { PlaytestPreset } from './playtestPresets';
 import { migrateLegacyPoints } from './types';
-import { initialSkillTree } from './skillTreeData';
+import { initialSkillTree, MASTERY_MAX } from './skillTreeData';
 import { applyPoeLayout, syncClusterFramesFromNodes } from './treeLayout';
 import { blockReason } from './nodeStatus';
 import { raceById } from './races';
@@ -86,6 +86,7 @@ const defaultState: SkillTreeState = {
   background: null,
   raceChoices: {},
   allocatedNodes: [],
+  nodeLevels: {},
   specializationLevels: {
     center: 0,
     magic: 0,
@@ -109,6 +110,7 @@ type Action =
   | { type: 'ALLOCATE_NODE'; node: SkillNode; choices?: Record<string, string[]>; treeData?: { nodes: SkillNode[] } }
   | { type: 'SET_NODE_CHOICE'; nodeId: string; optionIds: string[] }
   | { type: 'UPGRADE_SPECIALIZATION'; zone: ZoneType }
+  | { type: 'UPGRADE_NODE'; node: SkillNode }
   | { type: 'DISCOVER_SECRET'; id: string }
   | { type: 'GAIN_LEVEL' }
   | { type: 'SET_ARMOR_BONUS'; value: number }
@@ -171,10 +173,15 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
               [node.zone]: Math.max(1, state.specializationLevels[node.zone] ?? 0),
             }
           : state.specializationLevels;
+      const nodeLevels =
+        (node.maxLevel ?? 1) > 1 || node.category === 'specialization'
+          ? { ...state.nodeLevels, [node.id]: Math.max(1, state.nodeLevels[node.id] ?? 0) }
+          : state.nodeLevels;
       return {
         ...state,
         allocatedNodes: [...state.allocatedNodes, node.id],
         specializationLevels,
+        nodeLevels,
         orPoints: state.orPoints - node.cost.amount,
         nodeChoices: action.choices
           ? { ...state.nodeChoices, ...action.choices }
@@ -192,15 +199,39 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
       const { zone } = action;
       const current = state.specializationLevels[zone] ?? 0;
       if (current < 1) return state;
-      if (current >= 10) return state;
+      if (current >= MASTERY_MAX) return state;
       if (state.orPoints < TREE_ECONOMY.specUpgradeCost) return state;
+      const gift = initialSkillTree.nodes.find(
+        (n) => n.zone === zone && n.category === 'specialization',
+      );
+      const next = current + 1;
       return {
         ...state,
         orPoints: state.orPoints - TREE_ECONOMY.specUpgradeCost,
         specializationLevels: {
           ...state.specializationLevels,
-          [zone]: current + 1,
+          [zone]: next,
         },
+        nodeLevels: gift
+          ? { ...state.nodeLevels, [gift.id]: next }
+          : state.nodeLevels,
+      };
+    }
+
+    case 'UPGRADE_NODE': {
+      const { node } = action;
+      if (!state.allocatedNodes.includes(node.id)) return state;
+      if (node.category === 'specialization') return state; // дары — UPGRADE_SPECIALIZATION
+      const max = node.maxLevel ?? 1;
+      if (max <= 1) return state;
+      const current = state.nodeLevels[node.id] ?? 1;
+      if (current >= max) return state;
+      const cost = node.cost?.amount ?? 1;
+      if (state.orPoints < cost) return state;
+      return {
+        ...state,
+        orPoints: state.orPoints - cost,
+        nodeLevels: { ...state.nodeLevels, [node.id]: current + 1 },
       };
     }
 
@@ -311,6 +342,7 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
         race: p.race,
         background: p.background ?? null,
         allocatedNodes: [...p.allocatedNodes],
+        nodeLevels: { ...(p as { nodeLevels?: Record<string, number> }).nodeLevels },
         specializationLevels: specLevels,
         orPoints: p.orPoints,
         manualModifiers: manual,
@@ -380,6 +412,7 @@ function parseStateRaw(raw: string): SkillTreeState | null {
         ...defaultState.specializationLevels,
         ...(parsed.specializationLevels ?? {}),
       },
+      nodeLevels: parsed.nodeLevels ?? defaultState.nodeLevels,
       orPoints,
       combat,
       armorBonus,

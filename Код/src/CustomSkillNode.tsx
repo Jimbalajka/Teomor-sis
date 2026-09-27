@@ -5,6 +5,7 @@ import { useSkillTree } from './SkillTreeContext';
 import { blockReason, getNodeStatus, isHiddenSecret } from './nodeStatus';
 import { nodeBonusLine, nodeVisualTier } from './nodeLabels';
 import { isNodeDimmed } from './treeView';
+import { MASTERY_TIERS_RU, SKILL_DICE_LADDER } from './skillTreeData';
 
 export type SkillNodeData = { node: SkillNode };
 
@@ -55,6 +56,29 @@ export function CustomSkillNode({ data }: NodeProps) {
     node.category === 'specialization'
       ? state.specializationLevels[node.zone] ?? 0
       : undefined;
+  const nodeLvl =
+    node.category === 'specialization'
+      ? specLevel
+      : state.allocatedNodes.includes(node.id)
+        ? state.nodeLevels[node.id] ?? 1
+        : 0;
+  const maxLvl = node.maxLevel ?? (node.category === 'specialization' ? MASTERY_TIERS_RU.length : 1);
+  const lvl = nodeLvl ?? 0;
+  const canUpgrade =
+    status === 'unlocked' &&
+    maxLvl > 1 &&
+    lvl > 0 &&
+    lvl < maxLvl;
+  const tierLabel = (() => {
+    if (!lvl || maxLvl <= 1) return null;
+    if (node.id.includes('_dice_')) {
+      return SKILL_DICE_LADDER[Math.min(lvl, SKILL_DICE_LADDER.length) - 1] ?? `${lvl}`;
+    }
+    if (maxLvl === MASTERY_TIERS_RU.length || node.category === 'specialization') {
+      return MASTERY_TIERS_RU[Math.min(lvl, MASTERY_TIERS_RU.length) - 1] ?? `${lvl}`;
+    }
+    return `${lvl}/${maxLvl}`;
+  })();
 
   const legend = nodeLegendRole(node);
 
@@ -93,8 +117,8 @@ export function CustomSkillNode({ data }: NodeProps) {
       <span className="node-label">
         {hidden ? '?' : node.label}
         {bonus && !hidden && <span className="node-bonus">{bonus}</span>}
-        {specLevel !== undefined && !hidden && (
-          <span className="node-level">{specLevel}/10</span>
+        {tierLabel && !hidden && (
+          <span className="node-level">{tierLabel}</span>
         )}
       </span>
 
@@ -127,6 +151,12 @@ export function CustomSkillNode({ data }: NodeProps) {
             )}
             {status === 'available' && (
               <div className="tooltip-action">Нажми, чтобы изучить</div>
+            )}
+            {canUpgrade && (
+              <div className="tooltip-action">
+                Нажми, чтобы повысить ({lvl}/{maxLvl})
+                {node.cost?.amount ? ` · ${node.cost.amount} ОР` : ''}
+              </div>
             )}
           </>
         )}

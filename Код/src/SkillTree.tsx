@@ -206,12 +206,21 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         if (state.level < 1 || !state.background) setShowRaceModal(true);
         return;
       }
-      // Клик по уже открытой специализации — повысить её уровень (за ОР).
+      // Уже открытый дар — ступень мастерства (новичок→зверь).
       if (
         node.category === 'specialization' &&
         state.allocatedNodes.includes(node.id)
       ) {
         dispatch({ type: 'UPGRADE_SPECIALIZATION', zone: node.zone });
+        return;
+      }
+      // Уже открытый навык/кость — следующая ступень (без слепых требований).
+      if (
+        state.allocatedNodes.includes(node.id) &&
+        (node.maxLevel ?? 1) > 1 &&
+        node.category !== 'specialization'
+      ) {
+        dispatch({ type: 'UPGRADE_NODE', node });
         return;
       }
       if (getNodeStatus(node, state, treeData) === 'available') {

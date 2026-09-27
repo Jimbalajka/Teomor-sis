@@ -4,6 +4,7 @@ import { raceById } from './races';
 import type { ZoneType } from './types';
 import type { View } from './views';
 import { TREE_ECONOMY } from './treeEconomy';
+import { MASTERY_MAX } from './skillTreeData';
 import { auraHint } from './coreRules';
 import { applyPlaytestCatalog } from './cardsData';
 import { PLAYTEST_PRESETS, savePresetAbilities } from './playtestPresets';
@@ -207,10 +208,10 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
                 )}
               </div>
               <div className="spec-ctrl">
-                <span className="spec-level">{level}/10</span>
+                <span className="spec-level">{level}/{MASTERY_MAX}</span>
                 <button
                   className="btn btn-mini"
-                  disabled={!opened || level >= 10 || state.orPoints < TREE_ECONOMY.specUpgradeCost}
+                  disabled={!opened || level >= MASTERY_MAX || state.orPoints < TREE_ECONOMY.specUpgradeCost}
                   onClick={() => dispatch({ type: 'UPGRADE_SPECIALIZATION', zone })}
                 >
                   +

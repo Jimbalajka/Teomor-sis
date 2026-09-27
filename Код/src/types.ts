@@ -106,6 +106,8 @@ export interface SkillTreeState {
   raceChoices: Record<string, string>;
   allocatedNodes: string[];
   specializationLevels: Record<ZoneType, number>;
+  /** Ступени мастерства/кости у узла (1..maxLevel). Дары дублируются в specializationLevels. */
+  nodeLevels: Record<string, number>;
   /** ОР — Очко Развития (единая валюта древа). */
   orPoints: number;
   /** Раны и усталость — считает приложение, игрок только отмечает. */
