@@ -2,11 +2,11 @@ import type { SkillTreeData, SkillNode, SkillEdge, ZoneType } from './types';
 import { applyPoeLayout } from './treeLayout';
 
 /**
- * STUB v3 map — 2026-09-27 (rev I)
+ * STUB v3 map — 2026-09-27 (rev J)
  * SoT: BRIEF.md + фото листа docs/reference/sheet-skills/
  *
  * Круг = навык/характеристика (мастерство или кость).
- * Круг-гекс навыков листа = отдельная фигура к центру; боевой/соц = пакеты.
+ * Гекс навыков листа = между ромбами зоны; боевой/соц = пакеты.
  * Ромб = квели.
  * «Рем:» на листе — не узел. На фото нет Мистики (Разум) и Псионики (Стержень).
  */
@@ -44,7 +44,7 @@ type GiftPack = {
   label: string;
   charId: string;
   charLabel: string;
-  /** Навыки листа → отдельный круг-гекс (к центру от дара). */
+  /** Навыки листа → отдельный гекс между ромбами зоны. */
   skills: readonly string[];
   diceSkills?: ReadonlyArray<{ slug: string; name: string }>;
   socialHexLabel: string;
@@ -178,7 +178,7 @@ const nodes: SkillNode[] = [
     zone: 'center',
     category: 'root',
     cost: { type: 'OR', amount: 0 },
-    description: 'Корень. 4 дара. Навыки листа = круг-гекс. Stub v3I.',
+    description: 'Корень. 4 дара. Навыки листа = круг-гекс. Stub v3J.',
   },
 ];
 
@@ -252,7 +252,7 @@ for (const g of GIFT_PACKS) {
       requiredSpecialization: { zone: g.zone, level: 1 },
     },
     description:
-      `Круг-гекс навыков ${g.label}. Круги мастерства внутри фигуры.`,
+      `Гекс навыков ${g.label}. Круги мастерства на орбите гекса.`,
   });
   g.skills.forEach((name, si) => {
     nodes.push({

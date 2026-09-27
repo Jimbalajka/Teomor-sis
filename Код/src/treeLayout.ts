@@ -592,9 +592,9 @@ const STUB_GIFT = CELL * 5.6;
 const STUB_HEX_FWD = CELL * 4.4;
 const STUB_DIA_FWD = CELL * 10.4; // hexR+diaR+pad ≈ 5.9 CELL → зазор без клипа рамок
 const STUB_SIDE = CELL * 5.2; // combat↔social + соседние зоны не цепляются
-/** Круг-гекс навыков: смещение от дара к центру карты. */
-const STUB_SKILLS_IN = CELL * 2.6; // дар → к центру, пустой зазор на скрине
-const STUB_SKILLS_R = CELL * 2.5;
+/** Гекс навыков: на луче зоны, между двумя ромбами или чуть дальше. */
+const STUB_SKILLS_FWD = STUB_GIFT + STUB_DIA_FWD + CELL * 1.2;
+const STUB_SKILLS_R = CELL * 2.6;
 
 export function applyStubV3Layout(source: SkillNode[]): SkillNode[] {
   const nodes = source.map((n) => ({ ...n }));
@@ -720,29 +720,35 @@ export function applyStubV3Layout(source: SkillNode[]): SkillNode[] {
       put(n.id, gx + sx * t * CELL * 2.0 - fx * CELL * 1.4, gy + sy * t * CELL * 2.0 - fy * CELL * 1.4);
     });
 
-    // Круг навыков (как красный круг на скрине): одна фигура к центру от дара.
+    // Гекс навыков: от центра по лучу зоны, между двумя ромбами (чуть дальше).
     const sheetHex = nodes.find((n) => n.id === `hex_${zone}_skills`);
     if (sheetHex) {
-      const hx = fx * (STUB_GIFT - STUB_SKILLS_IN);
-      const hy = fy * (STUB_GIFT - STUB_SKILLS_IN);
+      const hx = fx * STUB_SKILLS_FWD;
+      const hy = fy * STUB_SKILLS_FWD;
       put(sheetHex.id, hx, hy);
       hubKinds.set(sheetHex.id, 'hex');
       const skills = (childrenOf.get(sheetHex.id) ?? [])
         .filter((c) => c.hub !== 'diamond')
         .sort((a, b) => a.id.localeCompare(b.id));
-      const n = Math.max(1, skills.length);
-      // равномерно по кругу — «фигура круга как гекс»
-      const r = STUB_SKILLS_R * (n <= 6 ? 1 : n <= 9 ? 1.15 : 1.28);
-      skills.forEach((sk, si) => {
-        const a = -Math.PI / 2 + (si / n) * Math.PI * 2;
-        put(sk.id, hx + Math.round(Math.cos(a) * r), hy + Math.round(Math.sin(a) * r));
+      // орбита ГЕКСА (не круг): до 6 на 1-м кольце, остаток на 2-м
+      const ring1 = skills.slice(0, 6);
+      const ring2 = skills.slice(6, 12);
+      const r1 = ring2.length ? STUB_SKILLS_R * 0.95 : STUB_SKILLS_R;
+      const r2 = STUB_SKILLS_R * 1.65;
+      ring1.forEach((sk, si) => {
+        const off = orbitPos('hex', si, r1);
+        put(sk.id, hx + off.x, hy + off.y);
+      });
+      ring2.forEach((sk, si) => {
+        const off = orbitPos('hex', si, r2);
+        put(sk.id, hx + off.x, hy + off.y);
       });
       frames.push({
         id: `hex_${sheetHex.id}`,
         kind: 'hex',
         cx: hx,
         cy: hy,
-        r: Math.round(r + HEX_PAD + 16),
+        r: Math.round((ring2.length ? r2 : r1) + HEX_PAD + 12),
         zone,
         label: sheetHex.label,
         anchorIds: [sheetHex.id, ...skills.map((s) => s.id)],

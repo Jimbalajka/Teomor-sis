@@ -28,7 +28,7 @@ import {
 
 const LS_STATE = 'teomor_skill_tree_state';
 const LS_DATA = 'teomor_skill_tree_data';
-const LAYOUT_REV = 70; // stub v3I: отдельный круг-гекс навыков к центру (как на скрине)
+const LAYOUT_REV = 71; // stub v3J: гекс навыков между ромбами (не в центре, не круг)
 /** Старые ключи — сохранёнка живёт в браузере; ключ нельзя было ронять. */
 const LS_DATA_FALLBACKS = [
   'teomor_skill_tree_data_v39',
