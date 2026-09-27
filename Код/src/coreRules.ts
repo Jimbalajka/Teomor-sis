@@ -118,8 +118,10 @@ export function defaultCombatState(
   };
 }
 
-/** Потолок усталости приёма от ранга квеля 1…10 */
+/** Лимит усталости приёма по рангу квеля (player-rules §1.1 → шкала 1…10). */
+export const KVEL_FATIGUE_CAP_BY_RANK = [0, 2, 4, 6, 9, 11, 13, 15, 18, 23, 30] as const;
+
 export function kvelFatigueCap(kvelRank: number): number {
   const r = Math.max(1, Math.min(KVEL_RANK_MAX, Math.floor(kvelRank)));
-  return r;
+  return KVEL_FATIGUE_CAP_BY_RANK[r];
 }
