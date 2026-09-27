@@ -28,7 +28,7 @@ import {
 
 const LS_STATE = 'teomor_skill_tree_state';
 const LS_DATA = 'teomor_skill_tree_data';
-const LAYOUT_REV = 72; // stub v3K: КРУГ навыков, одна орбита равномерно
+const LAYOUT_REV = 73; // stub v3L: без char-кругов; кости в круге навыков
 /** Старые ключи — сохранёнка живёт в браузере; ключ нельзя было ронять. */
 const LS_DATA_FALLBACKS = [
   'teomor_skill_tree_data_v39',

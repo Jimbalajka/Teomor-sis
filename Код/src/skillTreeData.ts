@@ -2,7 +2,7 @@ import type { SkillTreeData, SkillNode, SkillEdge, ZoneType } from './types';
 import { applyPoeLayout } from './treeLayout';
 
 /**
- * STUB v3 map — 2026-09-27 (rev K)
+ * STUB v3 map — 2026-09-27 (rev L)
  * SoT: BRIEF.md + фото листа docs/reference/sheet-skills/
  *
  * Круг = навык/характеристика (мастерство или кость).
@@ -42,10 +42,11 @@ type GiftPack = {
   zone: Z;
   id: string;
   label: string;
-  charId: string;
+  /** Имя характеристики на листе — прокачивается ДАРОМ, отдельного круга нет. */
   charLabel: string;
-  /** Навыки листа → отдельный КРУГ между ромбами зоны. */
+  /** Навыки листа → круг между ромбами. */
   skills: readonly string[];
+  /** Кости (Акробатика/Уклонение/…) — тоже в круге навыков, не между очагом и даром. */
   diceSkills?: ReadonlyArray<{ slug: string; name: string }>;
   socialHexLabel: string;
   socialDiaLabel: string;
@@ -57,7 +58,6 @@ const GIFT_PACKS: readonly GiftPack[] = [
     zone: 'dexterity',
     id: 'gift_snake',
     label: 'Дар Змея',
-    charId: 'char_motor',
     charLabel: 'Моторика',
     diceSkills: [
       { slug: 'acrobatics', name: 'Акробатика' },
@@ -82,7 +82,6 @@ const GIFT_PACKS: readonly GiftPack[] = [
     zone: 'magic',
     id: 'gift_bear',
     label: 'Дар Медведя',
-    charId: 'char_mind',
     charLabel: 'Разум',
     skills: [
       'Гуманитарная Наука',
@@ -105,7 +104,6 @@ const GIFT_PACKS: readonly GiftPack[] = [
     zone: 'wisdom',
     id: 'gift_dove',
     label: 'Дар Голубя',
-    charId: 'char_core',
     charLabel: 'Стержень',
     skills: [
       'Убеждение',
@@ -126,7 +124,6 @@ const GIFT_PACKS: readonly GiftPack[] = [
     zone: 'strength',
     id: 'gift_zubanya',
     label: 'Дар Зюбания',
-    charId: 'char_might',
     charLabel: 'Мощь',
     diceSkills: [
       { slug: 'health', name: 'Здоровье' },
@@ -178,7 +175,7 @@ const nodes: SkillNode[] = [
     zone: 'center',
     category: 'root',
     cost: { type: 'OR', amount: 0 },
-    description: 'Корень. 4 дара. Навыки листа = круг. Stub v3K.',
+    description: 'Корень. 4 дара. Мастерство характеристики = дар. Навыки = круг. Stub v3L.',
   },
 ];
 
@@ -195,48 +192,11 @@ for (const g of GIFT_PACKS) {
     maxLevel: MASTERY_MAX,
     requirements: { parentIds: ['center_start'] },
     description:
-      `${g.label}. Мастерство «${g.charLabel}»: нет → ${MASTERY_TIERS_RU.join(' → ')}. ` +
-      'Открывает круги навыков, гексы скилов/черт и ромбы квелей.',
+      `${g.label}. Мастерство «${g.charLabel}» в самом даре: нет → ${MASTERY_TIERS_RU.join(' → ')}. ` +
+      'Отдельного круга характеристики нет. Открывает круг навыков, гексы и ромбы.',
   });
 
-  nodes.push({
-    id: g.charId,
-    x: 0,
-    y: 0,
-    label: g.charLabel,
-    zone: g.zone,
-    category: 'transit_specialized',
-    cost: { type: 'OR', amount: 1 },
-    level: 0,
-    maxLevel: MASTERY_MAX,
-    requirements: {
-      parentIds: [g.id],
-      requiredSpecialization: { zone: g.zone, level: 1 },
-    },
-    description:
-      `Характеристика ${g.label}. Мастерство: нет → ${MASTERY_TIERS_RU.join(' → ')}.`,
-  });
-
-  for (const d of g.diceSkills ?? []) {
-    nodes.push({
-      id: `sk_${g.zone}_dice_${d.slug}`,
-      x: 0,
-      y: 0,
-      label: d.name,
-      zone: g.zone,
-      category: 'transit_specialized',
-      cost: { type: 'OR', amount: 1 },
-      level: 0,
-      maxLevel: SKILL_DICE_MAX,
-      requirements: {
-        parentIds: [g.id],
-        requiredSpecialization: { zone: g.zone, level: 1 },
-      },
-      description: diceDesc(d.name),
-    });
-  }
-
-  // Круг-гекс навыков листа: от дара к центру (как красный круг на скрине).
+  // Круг навыков листа (кости + мастерство) — дети дара. Без char_Моторика/Мощь/…
   const sheetHexId = `hex_${g.zone}_skills`;
   nodes.push({
     id: sheetHexId,
@@ -248,15 +208,36 @@ for (const g of GIFT_PACKS) {
     hub: 'circle',
     cost: { type: 'OR', amount: 1 },
     requirements: {
-      parentIds: [g.charId],
+      parentIds: [g.id],
       requiredSpecialization: { zone: g.zone, level: 1 },
     },
-    description:
-      `Круг навыков ${g.label}. Одна орбита, равномерно.`,
+    description: `Круг навыков ${g.label}. Одна орбита, равномерно.`,
   });
-  g.skills.forEach((name, si) => {
+
+  let skIdx = 0;
+  for (const d of g.diceSkills ?? []) {
+    skIdx += 1;
     nodes.push({
-      id: `sk_${g.zone}_n_${si + 1}_${slugify(name)}`,
+      id: `sk_${g.zone}_dice_${d.slug}`,
+      x: 0,
+      y: 0,
+      label: d.name,
+      zone: g.zone,
+      category: 'transit_specialized',
+      cost: { type: 'OR', amount: 1 },
+      level: 0,
+      maxLevel: SKILL_DICE_MAX,
+      requirements: {
+        parentIds: [sheetHexId],
+        requiredSpecialization: { zone: g.zone, level: 1 },
+      },
+      description: diceDesc(d.name),
+    });
+  }
+  g.skills.forEach((name) => {
+    skIdx += 1;
+    nodes.push({
+      id: `sk_${g.zone}_n_${skIdx}_${slugify(name)}`,
       x: 0,
       y: 0,
       label: name,

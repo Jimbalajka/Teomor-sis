@@ -712,19 +712,7 @@ export function applyStubV3Layout(source: SkillNode[]): SkillNode[] {
     placeDia(diaCombat, -1);
     placeDia(diaSocial, 1);
 
-    // У дара: характеристика + кости.
-    const giftKids = childrenOf.get(gift.id) ?? [];
-    const coreExtras = giftKids
-      .filter(
-        (n) =>
-          n.id.startsWith('char_') ||
-          n.id.startsWith(`sk_${zone}_dice_`),
-      )
-      .sort((a, b) => a.id.localeCompare(b.id));
-    coreExtras.forEach((n, i) => {
-      const t = coreExtras.length === 1 ? 0 : (i - (coreExtras.length - 1) / 2) * 0.5;
-      put(n.id, gx + sx * t * CELL * 2.0 - fx * CELL * 1.4, gy + sy * t * CELL * 2.0 - fy * CELL * 1.4);
-    });
+    // Характеристик/костей у дара больше нет — кости в круге навыков.
 
     // Круг навыков: между ромбами / чуть дальше. Одна орбита, равномерно.
     const sheetCircle = nodes.find((n) => n.id === `hex_${zone}_skills`);
@@ -737,7 +725,7 @@ export function applyStubV3Layout(source: SkillNode[]): SkillNode[] {
         .filter((c) => c.hub !== 'diamond' && c.hub !== 'hex')
         .sort((a, b) => a.id.localeCompare(b.id));
       const n = Math.max(1, skills.length);
-      const rOrbit = STUB_SKILLS_R * (n <= 6 ? 1 : n <= 8 ? 1.08 : 1.16);
+      const rOrbit = STUB_SKILLS_R * (n <= 6 ? 1 : n <= 8 ? 1.08 : n <= 10 ? 1.18 : 1.28);
       skills.forEach((sk, si) => {
         const a = -Math.PI / 2 + (si / n) * Math.PI * 2;
         put(
