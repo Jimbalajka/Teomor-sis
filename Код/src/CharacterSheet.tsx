@@ -1,19 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSkillTree } from './SkillTreeContext';
 import { raceById } from './races';
 import { backgroundById } from './backgrounds';
 import { AbilitiesTable } from './AbilitiesTable';
 import type { AbilityRow } from './abilityRows';
+import { DERIVED_FIELDS, SKILL_GROUPS, type SkillGroup } from './characterSheetData';
+import { collectStartingGrants } from './grants';
 import {
-  BASE_CHAR,
-  DERIVED_FIELDS,
-  SKILL_GROUPS,
-  charCapForLevel,
-  kvelRankForLevel,
-  rawSkillValue,
-  skillValue,
-  type SkillGroup,
-} from './characterSheetData';
+  giftRank,
+  rankArrow,
+  treeSkillRank,
+  zoneForChar,
+} from './ranks';
+import { MASTERY_TIERS_RU } from './skillTreeData';
 
 const LS_SHEET = 'teomor_sheet_v1';
 
@@ -33,8 +32,7 @@ const zoneOfChar: Record<SkillGroup['char'], string> = {
 };
 
 export function CharacterSheet() {
-  const { state, treeData, totalStatModifiers, kb } = useSkillTree();
-  const proficiencies = state.proficiencies ?? [];
+  const { state, treeData, kb } = useSkillTree();
   const { combat } = state;
   const [fields, setFields] = useState<Record<string, string>>(loadSheet);
   const [abilities, setAbilities] = useState<AbilityRow[]>(() => {
@@ -69,12 +67,14 @@ export function CharacterSheet() {
   const set = (key: string, val: string) =>
     setFields((f) => ({ ...f, [key]: val }));
 
-  const cap = charCapForLevel(state.level);
-  const rawCharValue = (char: string) => BASE_CHAR + (totalStatModifiers[char] ?? 0);
-  const charValue = (char: string) => Math.min(rawCharValue(char), cap);
-
   const race = raceById(state.race);
   const bg = backgroundById(state.background);
+  const grants = useMemo(() => collectStartingGrants(state), [state]);
+
+  const proficiencies = useMemo(() => {
+    const fromState = state.proficiencies ?? [];
+    return [...new Set([...fromState, ...grants.proficiencies])];
+  }, [state.proficiencies, grants.proficiencies]);
 
   const quels: string[] = [];
   const aspects: string[] = [];
@@ -85,7 +85,9 @@ export function CharacterSheet() {
     const node = treeData.nodes.find((n) => n.id === id);
     if (!node) continue;
     if (node.category === 'specialization') {
-      quels.push(`${node.label} (ур ${state.specializationLevels[node.zone] ?? 0})`);
+      const r = state.specializationLevels[node.zone] ?? 0;
+      const label = r > 0 ? MASTERY_TIERS_RU[r - 1] ?? `р${r}` : 'нет';
+      quels.push(`${node.label} (${label})`);
     }
     if (node.category === 'feat') feats.push(node.label);
     const picks = state.nodeChoices[id] ?? [];
@@ -97,10 +99,8 @@ export function CharacterSheet() {
       else if (c.id === 'feat') feats.push(...chosen);
       else if (c.id === 'craft') crafts.push(...chosen);
     }
-    if (node.category === 'transit_specialized' && node.choices?.some((c) => c.id === 'aspect')) {
-      quels.push(`Квель: ${node.label}`);
-    }
   }
+
   const derivedBlock = (title: string, items: string[]) =>
     items.length > 0 ? (
       <div className="derived-line">
@@ -121,9 +121,7 @@ export function CharacterSheet() {
         <div className="sheet-meta">
           <span>Раса: {race?.name ?? '—'}</span>
           <span>Предыстория: {bg?.name ?? '—'}</span>
-          <span>Уровень: {state.level}</span>
-          <span>Ранг Квеля: {kvelRankForLevel(state.level)}</span>
-          <span>Потолок хар./навыков: +{cap}</span>
+          <span>Ранг героя: —</span>
           <span>КБ: {kb}</span>
           <span>
             Раны: {combat.wounds}/{combat.woundsMax}
@@ -133,15 +131,6 @@ export function CharacterSheet() {
           </span>
         </div>
       </div>
-
-      {Object.keys(totalStatModifiers).length > 0 && (
-        <div className="sheet-tree-mods panel">
-          <b>Бонусы из древа:</b>{' '}
-          {Object.entries(totalStatModifiers)
-            .map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`)
-            .join(' · ')}
-        </div>
-      )}
 
       <AbilitiesTable rows={abilities} />
 
@@ -155,63 +144,50 @@ export function CharacterSheet() {
 
       {(quels.length || aspects.length || sigils.length || feats.length || crafts.length) > 0 && (
         <div className="sheet-derived-choices panel">
-          {derivedBlock('Квели', quels)}
+          {derivedBlock('Дары', quels)}
           {derivedBlock('Аспекты', aspects)}
           {derivedBlock('Сигилы', sigils)}
           {derivedBlock('Черты', feats)}
-          {derivedBlock('Ремёсла/Владения', crafts)}
+          {derivedBlock('Ремёсла', crafts)}
         </div>
       )}
 
       <div className="sheet-cols">
-        {SKILL_GROUPS.map((group) => (
-          <section
-            key={group.char}
-            className={`sheet-col zone-${zoneOfChar[group.char]}`}
-          >
-            <header className="sheet-char">
-              <span className="sheet-char-name">{group.char}</span>
-              <span
-                className="sheet-char-val"
-                title={
-                  rawCharValue(group.char) > cap
-                    ? `Ограничено потолком ранга Квеля (+${cap})`
-                    : undefined
-                }
-              >
-                {charValue(group.char) >= 0
-                  ? `+${charValue(group.char)}`
-                  : charValue(group.char)}
-                {rawCharValue(group.char) > cap && (
-                  <span className="char-capped"> ⚠</span>
-                )}
-              </span>
-            </header>
-            <ul className="sheet-skills">
-              {group.skills.map((s) => {
-                const raw = rawSkillValue(totalStatModifiers, s.name);
-                const val = skillValue(totalStatModifiers, s.name, state.level);
-                const capped = raw > cap;
-                return (
-                  <li key={s.name}>
-                    <span className="sheet-skill-name">{s.name}</span>
-                    <span
-                      className="sheet-skill-val sheet-char-val"
-                      title={
-                        capped
-                          ? `Ограничено потолком ранга Квеля (+${cap})`
-                          : undefined
-                      }
-                    >
-                      +{val}
-                      {capped && <span className="char-capped"> ⚠</span>}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ))}
+        {SKILL_GROUPS.map((group) => {
+          const zone = zoneForChar(group.char)!;
+          const gRank = giftRank(state, zone);
+          const gCur = rankArrow(gRank, 'mastery').current;
+          return (
+            <section
+              key={group.char}
+              className={`sheet-col zone-${zoneOfChar[group.char]}`}
+            >
+              <header className="sheet-char">
+                <span className="sheet-char-name">{group.char}</span>
+                <span className="sheet-char-val" title="Ранг через прокачку дара">
+                  {gCur}
+                </span>
+              </header>
+              <ul className="sheet-skills">
+                {group.skills.map((s) => {
+                  const fromTree = treeSkillRank(state, treeData, s.name, zone);
+                  const fromGrant = grants.skillRanks[s.name] ?? 0;
+                  const rank = Math.max(fromTree.rank, fromGrant);
+                  const kind = s.dice || fromTree.dice ? 'dice' : 'mastery';
+                  const cur = rankArrow(rank, kind).current;
+                  return (
+                    <li key={s.name}>
+                      <span className="sheet-skill-name">{s.name}</span>
+                      <span className="sheet-skill-val sheet-char-val" title={cur}>
+                        {cur}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          );
+        })}
       </div>
 
       <div className="sheet-derived">
@@ -240,9 +216,8 @@ export function CharacterSheet() {
       </div>
 
       <p className="muted">
-        Характеристики и навыки = база {BASE_CHAR} + бонусы из древа/расы/предыстории
-        (0–15, автоматически). КБ, раны и усталость — в Sidebar. Имя, инвентарь и прочее —
-        вручную.
+        Навыки и характеристики на листе — ранги (мастерство или кость), не «+N».
+        Раса/предыстория дают стартовый ранг или владение. Ранг героя — позже.
       </p>
     </div>
   );

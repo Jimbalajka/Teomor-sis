@@ -11,11 +11,10 @@ import {
 import type { SkillNode, SkillTreeData, SkillTreeState, ZoneType } from './types';
 import type { PlaytestPreset } from './playtestPresets';
 import { migrateLegacyPoints } from './types';
-import { initialSkillTree } from './skillTreeData';
-import { applyPoeLayout } from './treeLayout';
+import { initialSkillTree, MASTERY_MAX } from './skillTreeData';
+import { applyPoeLayout, syncClusterFramesFromNodes } from './treeLayout';
 import { blockReason } from './nodeStatus';
-import { raceById } from './races';
-import { backgroundById } from './backgrounds';
+import { collectStartingGrants } from './grants';
 import { TREE_ECONOMY } from './treeEconomy';
 import { buildRouteNodeSet, type TreeFocus } from './treeView';
 import {
@@ -26,8 +25,58 @@ import {
   type CombatState,
 } from './coreRules';
 
-const LS_STATE = 'teomor_skill_tree_state_v4';
-const LS_DATA = 'teomor_skill_tree_data_v25';
+const LS_STATE = 'teomor_skill_tree_state';
+const LS_DATA = 'teomor_skill_tree_data';
+const LAYOUT_REV = 73; // stub v3L: без char-кругов; кости в круге навыков
+/** Старые ключи — сохранёнка живёт в браузере; ключ нельзя было ронять. */
+const LS_DATA_FALLBACKS = [
+  'teomor_skill_tree_data_v39',
+  'teomor_skill_tree_data_v38',
+  'teomor_skill_tree_data_v37',
+  'teomor_skill_tree_data_v36',
+  'teomor_skill_tree_data_v35',
+  'teomor_skill_tree_data_v34',
+  'teomor_skill_tree_data_v47_schoolpack',
+  'teomor_skill_tree_data_v46_grid',
+  'teomor_skill_tree_data_v44_center_line',
+  'teomor_skill_tree_data_v43_restore_hex',
+  'teomor_skill_tree_data_v42_portal',
+  'teomor_skill_tree_data_v48_backup_restore',
+  'teomor_skill_tree_data_v45_polar',
+  'teomor_skill_tree_data_v41_noklass',
+  'teomor_skill_tree_data_v32',
+  'teomor_skill_tree_data_v31',
+  'teomor_skill_tree_data_v30',
+  'teomor_skill_tree_data_v25',
+  'teomor_skill_tree_data_v24',
+  'teomor_skill_tree_data_v23',
+  'teomor_skill_tree_data_v22',
+  'teomor_skill_tree_data_v21',
+  'teomor_skill_tree_data_v20',
+  'teomor_skill_tree_data_v19',
+  'teomor_skill_tree_data_v18',
+  'teomor_skill_tree_data_v17',
+  'teomor_skill_tree_data_v16',
+  'teomor_skill_tree_data_v15',
+  'teomor_skill_tree_data_v14',
+  'teomor_skill_tree_data_v13',
+  'teomor_skill_tree_data_v12',
+  'teomor_skill_tree_data_v11',
+  'teomor_skill_tree_data_v10',
+  'teomor_skill_tree_data_v9',
+  'teomor_skill_tree_data_v8',
+  'teomor_skill_tree_data_v7',
+  'teomor_skill_tree_data_v6',
+];
+const LS_STATE_FALLBACKS = [
+  'teomor_skill_tree_state_v4',
+  'teomor_skill_tree_state_v7_restore_hex',
+  'teomor_skill_tree_state_v6_portal',
+  'teomor_skill_tree_state_v9_grid',
+  'teomor_skill_tree_state_v8_polar',
+  'teomor_skill_tree_state_v5_noklass',
+];
+
 
 
 const defaultState: SkillTreeState = {
@@ -36,6 +85,7 @@ const defaultState: SkillTreeState = {
   background: null,
   raceChoices: {},
   allocatedNodes: [],
+  nodeLevels: {},
   specializationLevels: {
     center: 0,
     magic: 0,
@@ -59,6 +109,7 @@ type Action =
   | { type: 'ALLOCATE_NODE'; node: SkillNode; choices?: Record<string, string[]>; treeData?: { nodes: SkillNode[] } }
   | { type: 'SET_NODE_CHOICE'; nodeId: string; optionIds: string[] }
   | { type: 'UPGRADE_SPECIALIZATION'; zone: ZoneType }
+  | { type: 'UPGRADE_NODE'; node: SkillNode }
   | { type: 'DISCOVER_SECRET'; id: string }
   | { type: 'GAIN_LEVEL' }
   | { type: 'SET_ARMOR_BONUS'; value: number }
@@ -121,10 +172,15 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
               [node.zone]: Math.max(1, state.specializationLevels[node.zone] ?? 0),
             }
           : state.specializationLevels;
+      const nodeLevels =
+        (node.maxLevel ?? 1) > 1 || node.category === 'specialization'
+          ? { ...state.nodeLevels, [node.id]: Math.max(1, state.nodeLevels[node.id] ?? 0) }
+          : state.nodeLevels;
       return {
         ...state,
         allocatedNodes: [...state.allocatedNodes, node.id],
         specializationLevels,
+        nodeLevels,
         orPoints: state.orPoints - node.cost.amount,
         nodeChoices: action.choices
           ? { ...state.nodeChoices, ...action.choices }
@@ -142,15 +198,39 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
       const { zone } = action;
       const current = state.specializationLevels[zone] ?? 0;
       if (current < 1) return state;
-      if (current >= 10) return state;
+      if (current >= MASTERY_MAX) return state;
       if (state.orPoints < TREE_ECONOMY.specUpgradeCost) return state;
+      const gift = initialSkillTree.nodes.find(
+        (n) => n.zone === zone && n.category === 'specialization',
+      );
+      const next = current + 1;
       return {
         ...state,
         orPoints: state.orPoints - TREE_ECONOMY.specUpgradeCost,
         specializationLevels: {
           ...state.specializationLevels,
-          [zone]: current + 1,
+          [zone]: next,
         },
+        nodeLevels: gift
+          ? { ...state.nodeLevels, [gift.id]: next }
+          : state.nodeLevels,
+      };
+    }
+
+    case 'UPGRADE_NODE': {
+      const { node } = action;
+      if (!state.allocatedNodes.includes(node.id)) return state;
+      if (node.category === 'specialization') return state; // дары — UPGRADE_SPECIALIZATION
+      const max = node.maxLevel ?? 1;
+      if (max <= 1) return state;
+      const current = state.nodeLevels[node.id] ?? 1;
+      if (current >= max) return state;
+      const cost = node.cost?.amount ?? 1;
+      if (state.orPoints < cost) return state;
+      return {
+        ...state,
+        orPoints: state.orPoints - cost,
+        nodeLevels: { ...state.nodeLevels, [node.id]: current + 1 },
       };
     }
 
@@ -261,6 +341,7 @@ function reducer(state: SkillTreeState, action: Action): SkillTreeState {
         race: p.race,
         background: p.background ?? null,
         allocatedNodes: [...p.allocatedNodes],
+        nodeLevels: { ...(p as { nodeLevels?: Record<string, number> }).nodeLevels },
         specializationLevels: specLevels,
         orPoints: p.orPoints,
         manualModifiers: manual,
@@ -307,12 +388,8 @@ const SkillTreeContext = createContext<SkillTreeContextValue | undefined>(
   undefined,
 );
 
-function loadState(): SkillTreeState {
+function parseStateRaw(raw: string): SkillTreeState | null {
   try {
-    const raw =
-      localStorage.getItem(LS_STATE) ??
-      localStorage.getItem('teomor_skill_tree_state_v3');
-    if (!raw) return defaultState;
     const parsed = JSON.parse(raw) as Partial<SkillTreeState> & {
       developmentPoints?: number;
       transitPoints?: number;
@@ -334,6 +411,7 @@ function loadState(): SkillTreeState {
         ...defaultState.specializationLevels,
         ...(parsed.specializationLevels ?? {}),
       },
+      nodeLevels: parsed.nodeLevels ?? defaultState.nodeLevels,
       orPoints,
       combat,
       armorBonus,
@@ -343,60 +421,133 @@ function loadState(): SkillTreeState {
       nodeChoices: parsed.nodeChoices ?? defaultState.nodeChoices,
     };
   } catch {
-    return defaultState;
+    return null;
+  }
+}
+
+function loadState(): SkillTreeState {
+  for (const key of [LS_STATE, ...LS_STATE_FALLBACKS, 'teomor_skill_tree_state_v3']) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const st = parseStateRaw(raw);
+      if (!st) continue;
+      if (key !== LS_STATE) {
+        try {
+          localStorage.setItem(LS_STATE, JSON.stringify(st));
+        } catch {
+          /* ignore */
+        }
+      }
+      return st;
+    } catch {
+      continue;
+    }
+  }
+  return defaultState;
+}
+
+
+function treeSpread(nodes: { x: number; y: number }[]): number {
+  if (!nodes.length) return 0;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const n of nodes) {
+    minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+    minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+  }
+  return Math.hypot(maxX - minX, maxY - minY);
+}
+
+/** Сохранёнка «разъехалась» (пустой центр, точки по углам) — один раз пакуем school-pack. */
+function needsRelayout(nodes: { x: number; y: number }[]): boolean {
+  return treeSpread(nodes) > 22000;
+}
+
+function normalizeTree(parsed: SkillTreeData & { layoutRev?: number }): SkillTreeData {
+  let nodes = parsed.nodes.map((n) => ({
+    ...n,
+    cost: { type: 'OR' as const, amount: n.cost?.amount ?? 1 },
+  }));
+  const rev = parsed.layoutRev ?? 0;
+  // layoutRev / разъехавшийся bbox → pack; иначе бережём ручные x/y.
+  if (rev < LAYOUT_REV || needsRelayout(nodes)) {
+    nodes = applyPoeLayout(nodes);
+  } else {
+    syncClusterFramesFromNodes(nodes);
+  }
+  return { ...parsed, nodes, layoutRev: LAYOUT_REV } as SkillTreeData;
+}
+
+function readTreeFromKey(key: string): SkillTreeData | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SkillTreeData;
+    if (!parsed?.nodes?.length || !parsed?.edges) return null;
+    return normalizeTree(parsed);
+  } catch {
+    return null;
   }
 }
 
 function loadTree(): SkillTreeData {
-  try {
-    const raw = localStorage.getItem(LS_DATA);
-    if (!raw) return initialSkillTree;
-    const parsed = JSON.parse(raw) as SkillTreeData;
-    if (parsed?.nodes && parsed?.edges) {
-      // Всегда пересчитываем позиции — иначе рамки гексов разъезжаются с LS.
-      const nodes = applyPoeLayout(
-        parsed.nodes.map((n) => ({
-          ...n,
-          cost: { type: 'OR' as const, amount: n.cost?.amount ?? 1 },
-        })),
-      );
-      return { ...parsed, nodes };
+  // Stub v3 ship: НЕ поднимать старое LS-древо (там школы/профы) —
+  // иначе applyPoeLayout только двигает профессии и снова каша.
+  const stub = initialSkillTree.nodes.some((n) => n.id.startsWith('gift_'));
+  if (stub) {
+    const nodes = applyPoeLayout(initialSkillTree.nodes);
+    const tree = { ...initialSkillTree, nodes, layoutRev: LAYOUT_REV } as SkillTreeData & {
+      layoutRev?: number;
+    };
+    try {
+      localStorage.setItem(LS_DATA, JSON.stringify(tree));
+    } catch {
+      /* ignore quota */
     }
-    return initialSkillTree;
-  } catch {
-    return initialSkillTree;
+    return tree;
   }
-}
 
-/** Ощутимый бонус за уровень Дара (1–10): +1 к ключевой характеристике за каждый уровень. */
-const DAR_LEVEL_STAT: Partial<Record<ZoneType, string>> = {
-  magic: 'Разум',
-  strength: 'Мощь',
-  dexterity: 'Моторика',
-  wisdom: 'Стержень',
-};
+  const primary = readTreeFromKey(LS_DATA);
+  if (primary) return primary;
+
+  let best: SkillTreeData | null = null;
+  let bestKey = '';
+  let bestScore = -1;
+  for (const key of LS_DATA_FALLBACKS) {
+    const cand = readTreeFromKey(key);
+    if (!cand) continue;
+    const bonus = /v39$|v38$|v37$|v36$/.test(key) ? 50 : /v35$|v34$|v47_/.test(key) ? 20 : 0;
+    const score = cand.nodes.length * 10 + bonus;
+    if (score > bestScore) {
+      best = cand;
+      bestKey = key;
+      bestScore = score;
+    }
+  }
+  if (best) {
+    try {
+      localStorage.setItem(LS_DATA, JSON.stringify(best));
+      console.info('[teomor] восстановлена сохранёнка из', bestKey, 'nodes=', best.nodes.length);
+    } catch {
+      /* ignore quota */
+    }
+    return best;
+  }
+
+  return {
+    ...initialSkillTree,
+    nodes: applyPoeLayout(initialSkillTree.nodes),
+  };
+}
 
 function computeTotals(
   state: SkillTreeState,
   treeData: SkillTreeData,
 ): Record<string, number> {
+  // Лист больше не живёт на «+N». Здесь только то, что ещё числовое (КБ/броня/ручное).
   const totals: Record<string, number> = {};
-  const race = raceById(state.race);
-  const bg = backgroundById(state.background);
-  for (const src of [race, bg]) {
-    if (!src) continue;
-    for (const [stat, val] of Object.entries(src.statModifiers)) {
-      totals[stat] = (totals[stat] ?? 0) + val;
-    }
-  }
-  if (race?.choices) {
-    for (const c of race.choices) {
-      const chosen = state.raceChoices[c.id];
-      if (c.kind === 'char' && chosen) {
-        totals[chosen] = (totals[chosen] ?? 0) + (c.amount ?? 1);
-      }
-    }
-  }
+  const grants = collectStartingGrants(state);
+  if (grants.armor) totals['Броня'] = (totals['Броня'] ?? 0) + grants.armor;
   for (const [stat, val] of Object.entries(state.manualModifiers ?? {})) {
     totals[stat] = (totals[stat] ?? 0) + val;
   }
@@ -404,14 +555,10 @@ function computeTotals(
     const node = treeData.nodes.find((n) => n.id === id);
     if (!node?.statModifiers) continue;
     for (const [stat, val] of Object.entries(node.statModifiers)) {
-      totals[stat] = (totals[stat] ?? 0) + val;
-    }
-  }
-  for (const [zone, stat] of Object.entries(DAR_LEVEL_STAT) as [ZoneType, string][]) {
-    const darLvl = state.specializationLevels[zone] ?? 0;
-    if (darLvl > 0 && stat) {
-      totals[stat] = (totals[stat] ?? 0) + darLvl;
-      totals['Усталость'] = (totals['Усталость'] ?? 0) + Math.floor(darLvl / 3);
+      // характеристики-«+» с узлов игнорим; броню/КБ оставляем
+      if (stat === 'Броня' || stat === 'КБ' || stat === 'Усталость') {
+        totals[stat] = (totals[stat] ?? 0) + val;
+      }
     }
   }
   return totals;

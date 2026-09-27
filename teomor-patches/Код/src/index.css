@@ -2342,7 +2342,8 @@ body {
   filter: drop-shadow(0 0 10px rgba(148, 163, 184, 0.18));
 }
 .cluster-frame-hex .cluster-frame-svg polygon:first-child {
-  stroke-opacity: 0.85;
+  stroke-opacity: 0.95;
+  stroke-width: 3px;
 }
 .cluster-frame-diamond .cluster-frame-svg polygon {
   stroke-opacity: 0.75;

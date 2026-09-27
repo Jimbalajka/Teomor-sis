@@ -1,77 +1,76 @@
-/** Ядро v2 — константы и чистые функции. SoT: docs/core/CORE.md */
+/** Ядро v3 — константы и чистые функции. SoT: teomor-patches/v3/docs/CORE.md */
 
-export const SKILL_MIN = 0;
-export const SKILL_SOFT_CAP = 15;
-export const SKILL_HARD_CAP = 20;
+export const AURA_MIN = 1;
+export const AURA_MAX = 10;
+export const AURA_EPIC_MAX = 12;
+/** Цель выше ауры на столько → автопровал (или опц. проверка с эхом). */
+export const AURA_AUTOFALL_GAP = 4;
 
-/** kN по CORE.md §1: к6→…→3к20 (4к20 эндгейм). Макс ~3 кости за бросок. */
-export const MAX_ACTION_DICE = 3;
-
-export const KN_BY_LEVEL = [
-  { maxLevel: 2, dice: 'к6' },
-  { maxLevel: 4, dice: 'к8' },
-  { maxLevel: 6, dice: 'к10' },
-  { maxLevel: 8, dice: 'к12' },
-  { maxLevel: 10, dice: 'к20' },
-  { maxLevel: 12, dice: '2к12' },
-  { maxLevel: 14, dice: '2к20' },
-  { maxLevel: 16, dice: '3к20' },
-  { maxLevel: 99, dice: '4к20' },
+export const MASTERY_TIERS = [
+  'нет',
+  'новичок',
+  'ученик',
+  'эксперт',
+  'адепт',
+  'мастер',
+  'зверь',
 ] as const;
+export type MasteryTier = (typeof MASTERY_TIERS)[number];
 
-export function actionDiceForLevel(level: number): string {
-  const lv = Math.max(1, level);
-  for (const row of KN_BY_LEVEL) {
-    if (lv <= row.maxLevel) return row.dice;
-  }
-  return KN_BY_LEVEL[KN_BY_LEVEL.length - 1].dice;
+/** ступень 0…6 */
+export function masteryStep(tier: MasteryTier | string | number): number {
+  if (typeof tier === 'number') return Math.max(0, Math.min(6, Math.floor(tier)));
+  const i = MASTERY_TIERS.indexOf(tier as MasteryTier);
+  return i < 0 ? 0 : i;
+}
+
+export const CHECK_BASE = 5;
+
+/** сложность = 5 + их_ступень − моя */
+export function checkDifficulty(myStep: number, theirStep: number): number {
+  return CHECK_BASE + masteryStep(theirStep) - masteryStep(myStep);
+}
+
+export type CheckGate = 'auto' | 'roll' | 'autofail';
+
+export function resolveCheckGate(
+  aura: number,
+  targetLevel: number,
+  hasCondition = false,
+): CheckGate {
+  if (!hasCondition && aura > targetLevel) return 'auto';
+  if (targetLevel >= aura + AURA_AUTOFALL_GAP) return 'autofail';
+  return 'roll';
+}
+
+export function auraHint(
+  aura: number,
+  targetLevel: number,
+  hasCondition = false,
+): string {
+  const gate = resolveCheckGate(aura, targetLevel, hasCondition);
+  if (gate === 'auto') return 'Аура: авто';
+  if (gate === 'autofail') return 'Аура: автопровал / эхо';
+  return 'Аура: проверка к8';
+}
+
+export function successOnD8(difficulty: number): string {
+  const d = Math.max(1, difficulty);
+  if (d > 8) return 'нужен приём / инструмент';
+  if (d <= 1) return 'успех на 1+';
+  return `успех на ${d}+`;
 }
 
 export const WOUNDS_MIN = 2;
 export const WOUNDS_MAX = 6;
 export const KB_BASE = 10;
-export const AURA_AUTO_BELOW = 2;
-export const AURA_CHECK_WITHIN = 1;
-
-/** CORE.md §1 — ступени сложности для Мастера. */
-export const DIFFICULTY_TIERS = [
-  { value: 5, label: 'тривиально' },
-  { value: 10, label: 'легко' },
-  { value: 15, label: 'средне' },
-  { value: 20, label: 'сложно' },
-  { value: 30, label: 'очень' },
-  { value: 45, label: 'героически' },
-  { value: 60, label: 'легендарно' },
-  { value: 80, label: 'божественно' },
-] as const;
-
-export const DIFFICULTY = DIFFICULTY_TIERS.map((d) => d.value);
-export type DifficultyTier = (typeof DIFFICULTY_TIERS)[number]['value'];
+export const KVEL_RANK_MAX = 10;
 
 export interface CombatState {
   wounds: number;
   woundsMax: number;
   fatigue: number;
   fatigueMax: number;
-}
-
-export function auraNeedsCheck(
-  actorLevel: number,
-  targetLevel: number,
-  targetIsPc = false,
-): boolean {
-  if (targetIsPc) return true;
-  const diff = actorLevel - targetLevel;
-  if (diff >= AURA_AUTO_BELOW) return false;
-  if (Math.abs(diff) <= AURA_CHECK_WITHIN) return true;
-  return true;
-}
-
-export function auraHint(actorLevel: number, targetLevel: number): string {
-  const diff = actorLevel - targetLevel;
-  if (diff >= AURA_AUTO_BELOW) return 'Аура: авто';
-  if (Math.abs(diff) <= AURA_CHECK_WITHIN) return 'Аура: проверка или приём';
-  return 'Аура: проверка или приём';
 }
 
 export function computeKB(
@@ -87,37 +86,47 @@ export function computeKB(
   );
 }
 
+/** Раны: база от ауры + дерево. */
 export function computeWoundsMax(
-  level: number,
+  aura: number,
   modifiers: Record<string, number>,
 ): number {
   const fromTree = modifiers['Ранения'] ?? 0;
-  const fromLevel = Math.min(2, Math.floor(Math.max(0, level - 1) / 5));
-  return Math.min(WOUNDS_MAX, Math.max(WOUNDS_MIN, WOUNDS_MIN + fromLevel + fromTree));
+  const fromAura = Math.min(2, Math.floor(Math.max(0, aura - 1) / 5));
+  return Math.min(WOUNDS_MAX, Math.max(WOUNDS_MIN, WOUNDS_MIN + fromAura + fromTree));
 }
 
+/** Общий запас усталости героя (не путать с лимитом приёма квеля). */
 export function computeFatigueMax(
-  level: number,
+  aura: number,
   modifiers: Record<string, number>,
 ): number {
-  const base = 3 + Math.floor(level / 4);
+  const base = 3 + Math.floor(aura / 4);
   const fromTree = modifiers['Усталость'] ?? 0;
   return Math.max(3, base + fromTree);
 }
 
 export function defaultCombatState(
-  level: number,
+  aura: number,
   modifiers: Record<string, number>,
 ): CombatState {
   return {
     wounds: 0,
-    woundsMax: computeWoundsMax(level, modifiers),
+    woundsMax: computeWoundsMax(aura, modifiers),
     fatigue: 0,
-    fatigueMax: computeFatigueMax(level, modifiers),
+    fatigueMax: computeFatigueMax(aura, modifiers),
   };
 }
 
-export function clampSkill(value: number, allowArtifacts = false): number {
-  const cap = allowArtifacts ? SKILL_HARD_CAP : SKILL_SOFT_CAP;
-  return Math.max(SKILL_MIN, Math.min(cap, value));
+/** Лимит усталости приёма по рангу квеля (player-rules §1.1 → шкала 1…10). */
+export const KVEL_FATIGUE_CAP_BY_RANK = [0, 2, 4, 6, 9, 11, 13, 15, 18, 23, 30] as const;
+
+export function kvelFatigueCap(kvelRank: number): number {
+  const r = Math.max(1, Math.min(KVEL_RANK_MAX, Math.floor(kvelRank)));
+  return KVEL_FATIGUE_CAP_BY_RANK[r];
+}
+
+/** Холодные слоты = аура (1:1). */
+export function coldSlotsByAura(aura: number): number {
+  return Math.max(1, Math.min(10, Math.floor(aura)));
 }

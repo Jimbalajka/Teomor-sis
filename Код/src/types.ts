@@ -55,6 +55,7 @@ export interface SkillNode {
   description?: string;
   /** Только один узел из группы может быть изучен (развилка билда). */
   exclusiveGroup?: string;
+  hub?: 'hex' | 'diamond' | 'circle';
 }
 
 export interface NodeChoiceOption {
@@ -93,7 +94,12 @@ export interface Race {
   name: string;
   blurb: string;
   speed: number;
+  /** @deprecated числовые «+» убраны с листа; см. skillRanks / proficiencies. */
   statModifiers: Record<string, number>;
+  /** Стартовые ранги навыков (1 = новичок / 1к4). */
+  skillRanks?: Record<string, number>;
+  /** Владения и заделы текстом (не «+N»). */
+  proficiencies?: string[];
   abilities: string[];
   choices?: RaceChoice[];
 }
@@ -105,6 +111,8 @@ export interface SkillTreeState {
   raceChoices: Record<string, string>;
   allocatedNodes: string[];
   specializationLevels: Record<ZoneType, number>;
+  /** Ступени мастерства/кости у узла (1..maxLevel). Дары дублируются в specializationLevels. */
+  nodeLevels: Record<string, number>;
   /** ОР — Очко Развития (единая валюта древа). */
   orPoints: number;
   /** Раны и усталость — считает приложение, игрок только отмечает. */

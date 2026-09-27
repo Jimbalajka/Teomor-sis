@@ -4,6 +4,8 @@ import { raceById } from './races';
 import type { ZoneType } from './types';
 import type { View } from './views';
 import { TREE_ECONOMY } from './treeEconomy';
+import { MASTERY_MAX } from './skillTreeData';
+import { rankArrow } from './ranks';
 import { auraHint } from './coreRules';
 import { applyPlaytestCatalog } from './cardsData';
 import { PLAYTEST_PRESETS, savePresetAbilities } from './playtestPresets';
@@ -99,24 +101,19 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
           <p className="muted">Выбери расу в центре древа.</p>
         ) : (
           <div className="char-line">
-            <span>Уровень <b>{state.level}</b></span>
+            <span>Ранг героя: <b>—</b></span>
             <span>{race?.name ?? 'без расы'}</span>
           </div>
         )}
+        <p className="muted" style={{ marginTop: '0.35rem' }}>
+          Прогрессия ранга героя — позже.
+        </p>
         <div className="economy" style={{ marginTop: '0.5rem' }}>
           <div className="econ-pill econ-or">
             <span className="econ-num">{state.orPoints}</span>
             <span className="econ-cap">ОР</span>
           </div>
         </div>
-        <button
-          className="btn btn-primary"
-          style={{ marginTop: '0.5rem', width: '100%' }}
-          disabled={state.level < 1}
-          onClick={() => dispatch({ type: 'GAIN_LEVEL' })}
-        >
-          + Уровень (+{TREE_ECONOMY.orPerLevel} ОР)
-        </button>
       </Section>
 
       {state.level >= 1 && (
@@ -126,11 +123,9 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
               <div className="kb-block">
                 <span>КБ <b>{kb}</b></span>
                 <span className="kb-breakdown">
-                  10 + укл {totalStatModifiers['Уклонение'] ?? 0}
-                  {' + броня '}
-                  {state.armorBonus}
-                  {(totalStatModifiers['КБ'] ?? 0) + (totalStatModifiers['Броня'] ?? 0) > 0
-                    ? ` + древо ${(totalStatModifiers['КБ'] ?? 0) + (totalStatModifiers['Броня'] ?? 0)}`
+                  10 + укл (ранг) + броня {state.armorBonus}
+                  {(totalStatModifiers['Броня'] ?? 0) > 0
+                    ? ` + древо/раса ${totalStatModifiers['Броня']}`
                     : ''}
                 </span>
               </div>
@@ -166,7 +161,7 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
             </button>
             <div className="combat-track aura-row">
               <label className="armor-in">
-                Ур. цели
+                Ранг цели
                 <input type="number" min={1} className="armor-input" value={targetLevel} onChange={(e) => setTargetLevel(Number(e.target.value))} />
               </label>
               <span className="aura-hint">{auraHint(state.level, Math.max(1, targetLevel))}</span>
@@ -203,14 +198,14 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
                 <span className="spec-name">{dar}</span>
                 <span className="spec-dar">{branch}</span>
                 {level > 0 && (
-                  <span className="spec-bonus muted">+{level} {darStat}{level >= 3 ? ` · +${Math.floor(level / 3)} уст.` : ''}</span>
+                  <span className="spec-bonus muted">{darStat}: {rankArrow(level, 'mastery').text}</span>
                 )}
               </div>
               <div className="spec-ctrl">
-                <span className="spec-level">{level}/10</span>
+                <span className="spec-level">{level > 0 ? rankArrow(level, 'mastery').current : 'нет'}</span>
                 <button
                   className="btn btn-mini"
-                  disabled={!opened || level >= 10 || state.orPoints < TREE_ECONOMY.specUpgradeCost}
+                  disabled={!opened || level >= MASTERY_MAX || state.orPoints < TREE_ECONOMY.specUpgradeCost}
                   onClick={() => dispatch({ type: 'UPGRADE_SPECIALIZATION', zone })}
                 >
                   +
@@ -221,7 +216,7 @@ export function Sidebar({ editMode, onToggleEdit, view, onView }: SidebarProps) 
         })}
       </Section>
 
-      <Section title="Модификаторы" defaultOpen={false}>
+      <Section title="Прочее (броня/ручное)" defaultOpen={false}>
         {totals.length === 0 ? (
           <p className="muted">Пока пусто.</p>
         ) : (
