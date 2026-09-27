@@ -1,124 +1,76 @@
-/** Ядро v3 — чистые функции. SoT: teomor-patches/v3/docs/CORE.md */
+/** Ядро v3 — константы и чистые функции. SoT: teomor-patches/v3/docs/CORE.md */
 
-import {
-  MASTERY_LABEL_RU,
-  MASTERY_ORDER,
-  type CheckInput,
-  type CheckVerdict,
-  type MasteryTier,
-} from './types';
+export const AURA_MIN = 1;
+export const AURA_MAX = 10;
+export const AURA_EPIC_MAX = 12;
+/** Цель выше ауры на столько → автопровал (или опц. проверка с эхом). */
+export const AURA_AUTOFALL_GAP = 4;
 
-/** Минимальная грань к8, с которой грань = успех. null = провала нет (зверь). */
-export const SUCCESS_ON: Record<MasteryTier, number | null> = {
-  none: 8,
-  novice: 7,
-  apprentice: 6,
-  expert: 5,
-  adept: 4,
-  master: 3,
-  beast: null,
-};
+export const MASTERY_TIERS = [
+  'нет',
+  'новичок',
+  'ученик',
+  'эксперт',
+  'адепт',
+  'мастер',
+  'зверь',
+] as const;
+export type MasteryTier = (typeof MASTERY_TIERS)[number];
 
-export const DIE = 8 as const;
-export const CRIT_FAIL_FACE = 1;
-export const CRIT_SUCCESS_FACE = 8;
-/** Способность «крит шире»: успех-взрыв также с этой грани. */
-export const WIDE_CRIT_FACE = 7;
-
-export const KVEL_MIN = 1;
-export const KVEL_MAX = 10;
-
-export const WOUNDS_PC_MIN = 2;
-export const WOUNDS_PC_MAX = 6;
-
-export const INSPIRATION_MAX = 3;
-export const DESPAIR_MAX = 3;
-
-/** Аура: цель слабее на столько рангов квеля/уровня → авто. */
-export const AURA_AUTO_BELOW = 2;
-
-export const KB_BASE = 10;
-
-export function clampKvel(n: number): number {
-  return Math.max(KVEL_MIN, Math.min(KVEL_MAX, Math.floor(n)));
+/** ступень 0…6 */
+export function masteryStep(tier: MasteryTier | string | number): number {
+  if (typeof tier === 'number') return Math.max(0, Math.min(6, Math.floor(tier)));
+  const i = MASTERY_TIERS.indexOf(tier as MasteryTier);
+  return i < 0 ? 0 : i;
 }
 
-export function masteryIndex(tier: MasteryTier): number {
-  return MASTERY_ORDER.indexOf(tier);
+export const CHECK_BASE = 5;
+
+/** сложность = 5 + их_ступень − моя */
+export function checkDifficulty(myStep: number, theirStep: number): number {
+  return CHECK_BASE + masteryStep(theirStep) - masteryStep(myStep);
 }
 
-export function masteryAtLeast(have: MasteryTier, need: MasteryTier): boolean {
-  return masteryIndex(have) >= masteryIndex(need);
-}
+export type CheckGate = 'auto' | 'roll' | 'autofail';
 
-export function shiftMastery(tier: MasteryTier, delta: number): MasteryTier {
-  const i = Math.max(
-    0,
-    Math.min(MASTERY_ORDER.length - 1, masteryIndex(tier) + delta),
-  );
-  return MASTERY_ORDER[i];
-}
-
-/**
- * Единая формула §1:
- * квель выше + нет условия → auto;
- * зверь → beast (провала нет);
- * иначе roll с порогом грани.
- */
-export function resolveCheck(input: CheckInput): CheckVerdict {
-  const kvel = clampKvel(input.actorKvel);
-  const target = clampKvel(input.targetLevel);
-  const higher = kvel > target;
-  const forced = Boolean(input.specialCondition);
-
-  if (input.mastery === 'beast') {
-    return { type: 'beast' };
-  }
-
-  if (higher && !forced) {
-    return { type: 'auto' };
-  }
-
-  const successOn = SUCCESS_ON[input.mastery] ?? 8;
-  return {
-    type: 'roll',
-    die: DIE,
-    successOn,
-    label: `${MASTERY_LABEL_RU[input.mastery]}: успех на ${successOn}+`,
-  };
-}
-
-export function isSuccessFace(
-  face: number,
-  mastery: MasteryTier,
-  opts?: { wideCrit?: boolean },
-): boolean {
-  if (mastery === 'beast') return true;
-  const need = SUCCESS_ON[mastery] ?? 8;
-  if (face >= need) return true;
-  // wideCrit сам по себе не делает 7 успехом, если порог выше — только крит-взрыв при уже успехе
-  void opts;
-  return false;
-}
-
-/** Взрыв: 1 → риск крит-провала; 8 (или 7 при wideCrit и успехе) → риск крит-успеха. */
-export function explodeHint(
-  face: number,
-  opts?: { wideCrit?: boolean; beast?: boolean },
-): 'crit-fail-risk' | 'crit-success-risk' | null {
-  if (face === CRIT_FAIL_FACE && !opts?.beast) return 'crit-fail-risk';
-  if (face === CRIT_SUCCESS_FACE) return 'crit-success-risk';
-  if (opts?.wideCrit && face === WIDE_CRIT_FACE) return 'crit-success-risk';
-  return null;
-}
-
-export function auraAuto(
-  actorKvel: number,
+export function resolveCheckGate(
+  aura: number,
   targetLevel: number,
-  targetIsPc = false,
-): boolean {
-  if (targetIsPc) return false;
-  return clampKvel(actorKvel) - clampKvel(targetLevel) >= AURA_AUTO_BELOW;
+  hasCondition = false,
+): CheckGate {
+  if (!hasCondition && aura > targetLevel) return 'auto';
+  if (targetLevel >= aura + AURA_AUTOFALL_GAP) return 'autofail';
+  return 'roll';
+}
+
+export function auraHint(
+  aura: number,
+  targetLevel: number,
+  hasCondition = false,
+): string {
+  const gate = resolveCheckGate(aura, targetLevel, hasCondition);
+  if (gate === 'auto') return 'Аура: авто';
+  if (gate === 'autofail') return 'Аура: автопровал / эхо';
+  return 'Аура: проверка к8';
+}
+
+export function successOnD8(difficulty: number): string {
+  const d = Math.max(1, difficulty);
+  if (d > 8) return 'нужен приём / инструмент';
+  if (d <= 1) return 'успех на 1+';
+  return `успех на ${d}+`;
+}
+
+export const WOUNDS_MIN = 2;
+export const WOUNDS_MAX = 6;
+export const KB_BASE = 10;
+export const KVEL_RANK_MAX = 10;
+
+export interface CombatState {
+  wounds: number;
+  woundsMax: number;
+  fatigue: number;
+  fatigueMax: number;
 }
 
 export function computeKB(
@@ -134,18 +86,40 @@ export function computeKB(
   );
 }
 
-export function computePcWoundsMax(modifiers: Record<string, number>): number {
-  const fromTree = modifiers['Ранения'] ?? modifiers['Раны'] ?? 0;
-  return Math.min(
-    WOUNDS_PC_MAX,
-    Math.max(WOUNDS_PC_MIN, WOUNDS_PC_MIN + fromTree),
-  );
+/** Раны: база от ауры + дерево. */
+export function computeWoundsMax(
+  aura: number,
+  modifiers: Record<string, number>,
+): number {
+  const fromTree = modifiers['Ранения'] ?? 0;
+  const fromAura = Math.min(2, Math.floor(Math.max(0, aura - 1) / 5));
+  return Math.min(WOUNDS_MAX, Math.max(WOUNDS_MIN, WOUNDS_MIN + fromAura + fromTree));
 }
 
-/** Подсказка для UI/Мастера одной строкой. */
-export function checkHint(input: CheckInput): string {
-  const v = resolveCheck(input);
-  if (v.type === 'auto') return 'Автоуспех (квель выше, условий нет)';
-  if (v.type === 'beast') return 'Зверь: провала нет';
-  return `к8 · ${v.label}`;
+/** Общий запас усталости героя (не путать с лимитом приёма квеля). */
+export function computeFatigueMax(
+  aura: number,
+  modifiers: Record<string, number>,
+): number {
+  const base = 3 + Math.floor(aura / 4);
+  const fromTree = modifiers['Усталость'] ?? 0;
+  return Math.max(3, base + fromTree);
+}
+
+export function defaultCombatState(
+  aura: number,
+  modifiers: Record<string, number>,
+): CombatState {
+  return {
+    wounds: 0,
+    woundsMax: computeWoundsMax(aura, modifiers),
+    fatigue: 0,
+    fatigueMax: computeFatigueMax(aura, modifiers),
+  };
+}
+
+/** Потолок усталости приёма от ранга квеля 1…10 */
+export function kvelFatigueCap(kvelRank: number): number {
+  const r = Math.max(1, Math.min(KVEL_RANK_MAX, Math.floor(kvelRank)));
+  return r;
 }
