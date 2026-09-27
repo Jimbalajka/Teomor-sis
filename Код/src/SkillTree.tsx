@@ -12,7 +12,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useSkillTree } from './SkillTreeContext';
 import { CustomSkillNode } from './CustomSkillNode';
-import { ClusterFrameNode } from './ClusterFrameNode';
+import { ClusterFramesLayer } from './ClusterFrameNode';
 import { TreeFloatingEdge } from './TreeEdge';
 import { EditorPanel } from './EditorPanel';
 import { RaceModal } from './RaceModal';
@@ -20,16 +20,69 @@ import { ChoiceModal } from './ChoiceModal';
 import { getNodeStatus } from './nodeStatus';
 import { SkillTreeToolbar } from './SkillTreeToolbar';
 import { isEdgeOnRoute } from './treeView';
-import { getClusterFrames } from './treeLayout';
 import type { SkillNode, SkillTreeData, ZoneType } from './types';
 
 const nodeTypes = {
   skill: CustomSkillNode,
-  clusterFrame: ClusterFrameNode,
 };
 const edgeTypes = { floating: TreeFloatingEdge };
 
-const MAX_EDGE_LEN = 1300; // длинные рёбра = паутина, прячем
+/** Шоссе: центр→дар→хаб + короткие спицы. Длинная паутина parentIds — скрыта. */
+const MAX_EDGE_LEN = 1300;
+/** Дар → гекс/ромб-хаб дальше обычного MAX (stub v3C). */
+const MAX_GIFT_HUB_LEN = 2800;
+const HIGHWAY_CATS = new Set([
+  'root',
+  'specialization',
+  'subcategory',
+  'transit_specialized',
+]);
+
+function isGiftHubSpine(a: SkillNode, b: SkillNode): boolean {
+  const giftHub = (g: SkillNode, h: SkillNode) =>
+    g.category === 'specialization' &&
+    (h.hub === 'hex' || h.hub === 'diamond' || h.category === 'subcategory');
+  return giftHub(a, b) || giftHub(b, a);
+}
+
+function isCenterGiftSpine(a: SkillNode, b: SkillNode): boolean {
+  return (
+    (a.category === 'root' && b.category === 'specialization') ||
+    (b.category === 'root' && a.category === 'specialization')
+  );
+}
+
+function isSheetSkillNode(n: SkillNode): boolean {
+  // Навыки листа: круги внутри гекса (sk_<zone>_combat|social_…)
+  return n.id.startsWith('sk_') && !n.id.includes('_dice_');
+}
+
+function isHighwayEdge(a?: SkillNode, b?: SkillNode): boolean {
+  if (!a || !b) return false;
+  const dist = Math.hypot((a.x ?? 0) - (b.x ?? 0), (a.y ?? 0) - (b.y ?? 0));
+  // Магистраль дар→хаб (иначе дары «висят в воздухе»)
+  if (isGiftHubSpine(a, b) && dist <= MAX_GIFT_HUB_LEN) return true;
+  if (isCenterGiftSpine(a, b) && dist <= MAX_GIFT_HUB_LEN) return true;
+  // Дар ↛ прямые рёбра к кругам навыков (они внутри гекса).
+  if (
+    (a.category === 'specialization' && isSheetSkillNode(b)) ||
+    (b.category === 'specialization' && isSheetSkillNode(a))
+  ) {
+    return false;
+  }
+  if (dist > MAX_EDGE_LEN) return false;
+  // Спицы внутри локальной доски (короткие)
+  if (dist <= 520) return true;
+  // Магистраль по категориям
+  const spine =
+    HIGHWAY_CATS.has(a.category) ||
+    HIGHWAY_CATS.has(b.category) ||
+    a.hub === 'hex' ||
+    a.hub === 'diamond' ||
+    b.hub === 'hex' ||
+    b.hub === 'diamond';
+  return spine;
+}
 
 const zoneEdgeColor: Record<ZoneType, string> = {
   center: '#9ca3af',
@@ -40,30 +93,13 @@ const zoneEdgeColor: Record<ZoneType, string> = {
 };
 
 function buildNodes(treeData: SkillTreeData): Node[] {
-  const frames = getClusterFrames().map((f) => ({
-    id: f.id,
-    type: 'clusterFrame' as const,
-    // nodeOrigin [0.5,0.5] — position = центр рамки = центр хаба
-    position: { x: f.cx, y: f.cy },
-    data: {
-      kind: f.kind,
-      r: f.r,
-      zone: f.zone,
-      label: f.label,
-    },
-    draggable: false,
-    selectable: false,
-    focusable: false,
-    zIndex: -2,
-  }));
-  const skills = treeData.nodes.map((n) => ({
+  return treeData.nodes.map((n) => ({
     id: n.id,
     type: 'skill' as const,
     position: { x: n.x, y: n.y },
     data: { node: n },
-    zIndex: 1,
+    zIndex: 3,
   }));
-  return [...frames, ...skills];
 }
 
 export function SkillTree({ editMode }: { editMode: boolean }) {
@@ -80,7 +116,6 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
   const [showRaceModal, setShowRaceModal] = useState(false);
   const [choiceNode, setChoiceNode] = useState<SkillNode | null>(null);
   const [hoverNodeId, setHoverNodeId] = useState<string | null>(null);
-
   // Пересеять узлы, когда меняется структура древа (правка/импорт/сброс).
   useEffect(() => {
     setNodes(buildNodes(treeData));
@@ -89,6 +124,7 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
   const edges: Edge[] = useMemo(
     () =>
       treeData.edges.map((e) => {
+        const source = treeData.nodes.find((n) => n.id === e.from);
         const target = treeData.nodes.find((n) => n.id === e.to);
         const targetStatus = target ? getNodeStatus(target, state, treeData) : 'locked';
         const targetUnlocked = state.allocatedNodes.includes(e.to);
@@ -98,43 +134,49 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         const dimRoute = showRouteHighlight && routeHighlight.size > 0 && !onRoute;
         const linked =
           !!hoverNodeId && (e.from === hoverNodeId || e.to === hoverNodeId);
-        const a = treeData.nodes.find((n) => n.id === e.from);
-        const b = target;
-        const dist =
-          a && b ? Math.hypot((a.x ?? 0) - (b.x ?? 0), (a.y ?? 0) - (b.y ?? 0)) : 0;
-        const tooLong = dist > MAX_EDGE_LEN;
+        // Hover/маршрут показывают даже скрытые; иначе только шоссе.
+        const highway = isHighwayEdge(source, target);
+        const hidden = !highway && !linked && !onRoute;
+        const spine =
+          !!source &&
+          !!target &&
+          (isGiftHubSpine(source, target) || isCenterGiftSpine(source, target));
         return {
           id: `${e.from}-${e.to}`,
-          hidden: tooLong,
           source: e.from,
           target: e.to,
           type: 'floating',
           animated: false,
+          hidden,
           className: onRoute
             ? 'edge-route'
             : linked
               ? 'edge-linked'
               : dimRoute
                 ? 'edge-dimmed'
-                : 'edge-idle',
+                : spine
+                  ? 'edge-spine'
+                  : 'edge-idle',
           style: {
             stroke: onRoute
               ? '#facc15'
-              : linked
+              : linked || spine
                 ? color
                 : targetUnlocked
                   ? color
                   : targetStatus === 'available'
                     ? color
                     : '#64748b',
-            strokeWidth: onRoute ? 3.5 : linked ? 3 : targetUnlocked ? 2 : 1.25,
+            strokeWidth: onRoute ? 3.5 : linked ? 3 : spine ? 2.75 : targetUnlocked ? 2 : 1.25,
             opacity: dimRoute
               ? 0.08
               : linked || onRoute
                 ? 1
-                : targetUnlocked
-                  ? 0.55
-                  : 0.18,
+                : spine
+                  ? 0.72
+                  : targetUnlocked
+                    ? 0.55
+                    : 0.22,
           },
         };
       }),
@@ -150,7 +192,9 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
 
   const onNodeClick = useCallback(
     (_: unknown, rfNode: Node) => {
-      const node = (rfNode.data as { node: SkillNode }).node;
+      if (rfNode.id === '__cluster_overlay__' || rfNode.type === 'clusterFrame') return;
+      const node = (rfNode.data as { node?: SkillNode }).node;
+      if (!node) return;
       if (editMode) {
         setSelectedId(node.id);
         return;
@@ -251,11 +295,12 @@ export function SkillTree({ editMode }: { editMode: boolean }) {
         elementsSelectable={editMode}
         nodeOrigin={[0.5, 0.5]}
         fitView
-        fitViewOptions={{ padding: 0.15, maxZoom: 1.1 }}
+        fitViewOptions={{ padding: 0.2, maxZoom: 1.2 }}
         minZoom={0.2}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
       >
+        <ClusterFramesLayer />
         <Background color="#1f2937" gap={28} />
         <Controls showInteractive={false} />
         <MiniMap

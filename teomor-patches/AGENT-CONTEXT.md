@@ -1,13 +1,61 @@
 # AGENT-CONTEXT — Теомор (живой тезис)
 
-> **Первым делом каждую сессию:** этот файл → `docs/core/CORE.md` (эталон правил v2) → `Код/src/`.
-> **Не** book-player.md и **не** быстрый старт для UI правил — только CORE.md.
-> Обновлять после каждой сессии. Детали кода — в `Код/src/`, не дублировать сюда.
+> **Первым делом каждую сессию:** `DECISIONS.md` + `BRIEF.md` → этот файл → `v3/docs/CORE.md` → `Код/src/`.
+> Обновлять после каждой сессии.
+
+## СЕЙЧАС (2026-09-27) — stub v3H: навыки ВНУТРИ гекса, не тропа
+
+**Сделано к проверке (LAYOUT_REV=69):**
+1. Тропа-цепочка навыков убрана. Навыки листа = **круги на орбите гекса**.
+2. Дар Змея → Моторика + кости у дара; боевой гекс / практика-гекс с навыками внутри.
+3. Боевой: Ближний бой, Дальний бой, Скрытность, Воровские Навыки (+ черты-заглушки).
+4. Практика: Ловкость рук, Печати, Верховая Езда, Вождение, Судовождение, Пилотирование.
+5. Акробатика / Уклонение — кости у дара (не в гексе).
+6. Остальные дары — тот же каркас (split навыков по двум гексам).
+**Live:** https://teomor.acheaches.unstoppable-ai.site/0a95a994-teomor/ (hard refresh).
+**Ждём OK.**
+
+## Дневник layout — Проблема → Решение (НЕ ЛОМАТЬ)
+
+### HOTFIX 2026-09-21 ночь — «нет гексов/ромбов»
+**Проблема:** на экране бардак без видимых гексов/ромбов.
+**Причина:** `syncClusterFramesFromNodes` затирал `lastClusterFrames`; школы/профы без `hub`.
+**Решение:** `applyPoeLayout` ставит `hub: hex|diamond`; пустой sync не затирает; `LAYOUT_REV=51` перепаковывает один раз. Проверка: 21 hex + 38 diamond frames.
+
+
+### Проблема
+Паутина всех `parentIds` + орбиты/радиус/stampCluster → наслоения, полукруги школ, каша в центре.
+
+### Решение (утверждено автором 2026-09-20: «Вооот идеально», LS **v39**)
+1. Всё на одном холсте — быстрый обзор.
+2. Школа = локальная доска (гекс + ромбы суб-профов наружу).
+3. Связи только «шоссе» (центр→дар→школа→суб-проф + короткие спицы); длинная паутина parentIds скрыта (`isHighwayEdge`).
+4. Рамки через ViewportPortal (`ClusterFramesLayer`), не RF-ноды.
+5. Мелкие налезания — ручная правка в редакторе, не новый алгоритм.
+
+### Эталон на диске
+- Код: `Код/src/treeLayout.ts` — **CELL=200** school-pack (`applyHighwayLayout`).
+- Полный бэкап (не куцый): `teomor-patches/backups-ideal-schoolpack-v39/` — layout + SkillTree + Context + frames + data.
+- Реконструкция коммитом: `0b1c94f` (+ LS-recovery стабильных ключей).
+- Live: https://teomor.acheaches.unstoppable-ai.site/0a95a994-teomor/ (hard refresh).
+
+### Запрещено без явного запроса автора
+- polar / `ZONE_ANGLE` / «звезда»
+- `stampCluster` на центр
+- cartesian «псевдосетка» day1 как основной layout
+- сжимать CELL (140 и т.п.) без просьбы
+- **неполный бэкап** (только skillTreeData без treeLayout/SkillTree/Context/frames)
+- бамп LS-ключа без просьбы (затирает ручные x/y)
+
+### Правило адекватности
+Если решение уже записано здесь или в чате — делать **ровно по нему**, целиком. Не сдавать кривое/неполное и не подменять другим алгоритмом «на всякий случай».
 
 ## SoT (источники истины)
 
 | Тема | Файл |
 |------|------|
+| **Правила v3 (новое ядро)** | `teomor-patches/v3/docs/CORE.md` |
+| **Код древа v3 (каркас)** | `teomor-patches/v3/code/` |
 | **Правила v2 (эталон)** | `teomor-patches/docs/core/CORE.md` |
 | Краткая выжимка | `teomor-patches/docs/CORE-summary.md` |
 | **Каталог сигилов** | `teomor-patches/docs/design/sigil-catalog.md` |
@@ -62,7 +110,7 @@
 - **#37** https://github.com/Jimbalajka/Teomor-sis/pull/37 — `feat/tree-cluster-slots` → `main`
 
 ## Приоритет работ (сейчас)
-0. **Плейтест ядра v3** — \`v3/docs/CORE.md\`; древо-каркас в \`v3/code/\` (не ломать v2 UI)
+0. **Плейтест ядра v3** — `v3/docs/CORE.md`; древо-каркас в `v3/code/` (не ломать v2 UI)
 1. **Плейтест 3 перс.** — обновить пресеты под новые ID
 2. UI sidebar — по скринам
 3. Баланс позиций — `applyHighwayLayout` (шаг↑, слоты за |x|max), live URL в `docs/reference/teomor.md`
@@ -125,15 +173,22 @@
 - Не трогать пресеты пока не готова ветка
 
 ## Changelog
-- 2026-09-20: CORE v3 папка \`teomor-patches/v3/\` (квель+мастерство+к8); каркас древа v3; v2 не заменён
-- 2026-09-15: fork logic по эталону путей (placeExclusiveFork для всех exclusiveGroup); центр-компас; LS v17; PR #31
+- 2026-09-27: stub v3H — навыки листа кругами внутри гексов, тропа убрана; LAYOUT_REV=69
+- 2026-09-20: CORE v3 папка `teomor-patches/v3/` (квель+мастерство+к8); каркас древа v3; v2 не заменён
+- 2026-09-15: fork logic по эталону путей (placeExclusiveFork для всех exclusiveGroup); центр-компас; LS v17; PR #34
 - 2026-09-15: restore UI (treeFocus/route) + denser highway spacing; slots вне веток; LS v15; live https://teomor.acheaches.unstoppable-ai.site/0a95a994-teomor/
 - 2026-09-15: сетка древа — `treeLayout.ts` (CELL 160), pack без наложений; слоты Черт/Ремёсел вынесены; дубли addRoad убраны; LS_DATA v9
 - 2026-03-28: green + amber + PR (all branches complete)
 - 2026-03-28: general branch + exclusiveGroup + magic/red rework (D&D/PoE forks)
 - 2026-03-28: файл создан
-- 2026-09-11: режим «Боту 3» в AGENT-CONTEXT; PR #31; CORE.md SoT
+- 2026-09-11: режим «Боту 3» в AGENT-CONTEXT; PR #34; CORE.md SoT
 
 
 ## Текущий PR
-- **#31** https://github.com/Jimbalajka/Teomor-sis/pull/31 — `feat/tree-visible-hex-frames` → `main`
+- **#31** https://github.com/Jimbalajka/Teomor-sis/pull/31 — `feat/tree-poe-compact-no-frames` → `main`
+
+## 2026-09-21 rollback
+Откат на резервную копию `backups-tree-pre-noklass` + UI/layout с `6a2f6ab` (working hex map). LS `v48_backup_restore`. Live пересобран. PR нет.
+
+## 2026-09-21 LS recovery
+Причина пропажи сохранёнки: постоянный bump `LS_DATA` + `applyPoeLayout` при load затирал x/y. Исправлено: стабильные ключи `teomor_skill_tree_data` / `teomor_skill_tree_state`, fallback по старым ключам (v39…), позиции из LS не пересчитываются. Не бампать LS без явной просьбы.

@@ -12,7 +12,7 @@ import type { SkillNode, SkillTreeData, SkillTreeState, ZoneType } from './types
 import type { PlaytestPreset } from './playtestPresets';
 import { migrateLegacyPoints } from './types';
 import { initialSkillTree } from './skillTreeData';
-import { applyPoeLayout } from './treeLayout';
+import { applyPoeLayout, syncClusterFramesFromNodes } from './treeLayout';
 import { blockReason } from './nodeStatus';
 import { raceById } from './races';
 import { backgroundById } from './backgrounds';
@@ -26,8 +26,58 @@ import {
   type CombatState,
 } from './coreRules';
 
-const LS_STATE = 'teomor_skill_tree_state_v4';
-const LS_DATA = 'teomor_skill_tree_data_v36';
+const LS_STATE = 'teomor_skill_tree_state';
+const LS_DATA = 'teomor_skill_tree_data';
+const LAYOUT_REV = 69; // stub v3H: навыки=круги внутри гексов, не тропа от дара
+/** Старые ключи — сохранёнка живёт в браузере; ключ нельзя было ронять. */
+const LS_DATA_FALLBACKS = [
+  'teomor_skill_tree_data_v39',
+  'teomor_skill_tree_data_v38',
+  'teomor_skill_tree_data_v37',
+  'teomor_skill_tree_data_v36',
+  'teomor_skill_tree_data_v35',
+  'teomor_skill_tree_data_v34',
+  'teomor_skill_tree_data_v47_schoolpack',
+  'teomor_skill_tree_data_v46_grid',
+  'teomor_skill_tree_data_v44_center_line',
+  'teomor_skill_tree_data_v43_restore_hex',
+  'teomor_skill_tree_data_v42_portal',
+  'teomor_skill_tree_data_v48_backup_restore',
+  'teomor_skill_tree_data_v45_polar',
+  'teomor_skill_tree_data_v41_noklass',
+  'teomor_skill_tree_data_v32',
+  'teomor_skill_tree_data_v31',
+  'teomor_skill_tree_data_v30',
+  'teomor_skill_tree_data_v25',
+  'teomor_skill_tree_data_v24',
+  'teomor_skill_tree_data_v23',
+  'teomor_skill_tree_data_v22',
+  'teomor_skill_tree_data_v21',
+  'teomor_skill_tree_data_v20',
+  'teomor_skill_tree_data_v19',
+  'teomor_skill_tree_data_v18',
+  'teomor_skill_tree_data_v17',
+  'teomor_skill_tree_data_v16',
+  'teomor_skill_tree_data_v15',
+  'teomor_skill_tree_data_v14',
+  'teomor_skill_tree_data_v13',
+  'teomor_skill_tree_data_v12',
+  'teomor_skill_tree_data_v11',
+  'teomor_skill_tree_data_v10',
+  'teomor_skill_tree_data_v9',
+  'teomor_skill_tree_data_v8',
+  'teomor_skill_tree_data_v7',
+  'teomor_skill_tree_data_v6',
+];
+const LS_STATE_FALLBACKS = [
+  'teomor_skill_tree_state_v4',
+  'teomor_skill_tree_state_v7_restore_hex',
+  'teomor_skill_tree_state_v6_portal',
+  'teomor_skill_tree_state_v9_grid',
+  'teomor_skill_tree_state_v8_polar',
+  'teomor_skill_tree_state_v5_noklass',
+];
+
 
 
 const defaultState: SkillTreeState = {
@@ -307,12 +357,8 @@ const SkillTreeContext = createContext<SkillTreeContextValue | undefined>(
   undefined,
 );
 
-function loadState(): SkillTreeState {
+function parseStateRaw(raw: string): SkillTreeState | null {
   try {
-    const raw =
-      localStorage.getItem(LS_STATE) ??
-      localStorage.getItem('teomor_skill_tree_state_v3');
-    if (!raw) return defaultState;
     const parsed = JSON.parse(raw) as Partial<SkillTreeState> & {
       developmentPoints?: number;
       transitPoints?: number;
@@ -343,29 +389,123 @@ function loadState(): SkillTreeState {
       nodeChoices: parsed.nodeChoices ?? defaultState.nodeChoices,
     };
   } catch {
-    return defaultState;
+    return null;
+  }
+}
+
+function loadState(): SkillTreeState {
+  for (const key of [LS_STATE, ...LS_STATE_FALLBACKS, 'teomor_skill_tree_state_v3']) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const st = parseStateRaw(raw);
+      if (!st) continue;
+      if (key !== LS_STATE) {
+        try {
+          localStorage.setItem(LS_STATE, JSON.stringify(st));
+        } catch {
+          /* ignore */
+        }
+      }
+      return st;
+    } catch {
+      continue;
+    }
+  }
+  return defaultState;
+}
+
+
+function treeSpread(nodes: { x: number; y: number }[]): number {
+  if (!nodes.length) return 0;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const n of nodes) {
+    minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+    minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+  }
+  return Math.hypot(maxX - minX, maxY - minY);
+}
+
+/** Сохранёнка «разъехалась» (пустой центр, точки по углам) — один раз пакуем school-pack. */
+function needsRelayout(nodes: { x: number; y: number }[]): boolean {
+  return treeSpread(nodes) > 22000;
+}
+
+function normalizeTree(parsed: SkillTreeData & { layoutRev?: number }): SkillTreeData {
+  let nodes = parsed.nodes.map((n) => ({
+    ...n,
+    cost: { type: 'OR' as const, amount: n.cost?.amount ?? 1 },
+  }));
+  const rev = parsed.layoutRev ?? 0;
+  // layoutRev / разъехавшийся bbox → pack; иначе бережём ручные x/y.
+  if (rev < LAYOUT_REV || needsRelayout(nodes)) {
+    nodes = applyPoeLayout(nodes);
+  } else {
+    syncClusterFramesFromNodes(nodes);
+  }
+  return { ...parsed, nodes, layoutRev: LAYOUT_REV } as SkillTreeData;
+}
+
+function readTreeFromKey(key: string): SkillTreeData | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SkillTreeData;
+    if (!parsed?.nodes?.length || !parsed?.edges) return null;
+    return normalizeTree(parsed);
+  } catch {
+    return null;
   }
 }
 
 function loadTree(): SkillTreeData {
-  try {
-    const raw = localStorage.getItem(LS_DATA);
-    if (!raw) return initialSkillTree;
-    const parsed = JSON.parse(raw) as SkillTreeData;
-    if (parsed?.nodes && parsed?.edges) {
-      // Всегда пересчитываем позиции — иначе рамки гексов разъезжаются с LS.
-      const nodes = applyPoeLayout(
-        parsed.nodes.map((n) => ({
-          ...n,
-          cost: { type: 'OR' as const, amount: n.cost?.amount ?? 1 },
-        })),
-      );
-      return { ...parsed, nodes };
+  // Stub v3 ship: НЕ поднимать старое LS-древо (там школы/профы) —
+  // иначе applyPoeLayout только двигает профессии и снова каша.
+  const stub = initialSkillTree.nodes.some((n) => n.id.startsWith('gift_'));
+  if (stub) {
+    const nodes = applyPoeLayout(initialSkillTree.nodes);
+    const tree = { ...initialSkillTree, nodes, layoutRev: LAYOUT_REV } as SkillTreeData & {
+      layoutRev?: number;
+    };
+    try {
+      localStorage.setItem(LS_DATA, JSON.stringify(tree));
+    } catch {
+      /* ignore quota */
     }
-    return initialSkillTree;
-  } catch {
-    return initialSkillTree;
+    return tree;
   }
+
+  const primary = readTreeFromKey(LS_DATA);
+  if (primary) return primary;
+
+  let best: SkillTreeData | null = null;
+  let bestKey = '';
+  let bestScore = -1;
+  for (const key of LS_DATA_FALLBACKS) {
+    const cand = readTreeFromKey(key);
+    if (!cand) continue;
+    const bonus = /v39$|v38$|v37$|v36$/.test(key) ? 50 : /v35$|v34$|v47_/.test(key) ? 20 : 0;
+    const score = cand.nodes.length * 10 + bonus;
+    if (score > bestScore) {
+      best = cand;
+      bestKey = key;
+      bestScore = score;
+    }
+  }
+  if (best) {
+    try {
+      localStorage.setItem(LS_DATA, JSON.stringify(best));
+      console.info('[teomor] восстановлена сохранёнка из', bestKey, 'nodes=', best.nodes.length);
+    } catch {
+      /* ignore quota */
+    }
+    return best;
+  }
+
+  return {
+    ...initialSkillTree,
+    nodes: applyPoeLayout(initialSkillTree.nodes),
+  };
 }
 
 /** Ощутимый бонус за уровень Дара (1–10): +1 к ключевой характеристике за каждый уровень. */

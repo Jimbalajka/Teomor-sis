@@ -1,10 +1,11 @@
 import type { SkillNode, ZoneType } from './types';
 
 /**
- * PoE-модель:
- *   школа      → центр ГЕКСА, на кольце — навыки школы
+ * Гибрид (school-pack / LS v39):
+ *   один холст — быстрый обзор всего древа
+ *   школа      → локальная доска: гекс + ромбы наружу
  *   суб-проф.  → центр своего РОМБА (не слот на гексе школы)
- *   углубления → углы ромба / следующие ромбы по тому же лучу
+ *   рёбра      → шоссе в SkillTree; длинная паутина parentIds скрыта
  */
 const CELL = 200;
 const SNAP = 20;
@@ -31,8 +32,32 @@ export type ClusterFrameSpec = {
 };
 
 let lastClusterFrames: ClusterFrameSpec[] = [];
-export function getClusterFrames(): ClusterFrameSpec[] {
+/** Рамки из последнего applyPoeLayout (ViewportPortal читает их). */
+export function getClusterFrames(_nodes?: SkillNode[]): ClusterFrameSpec[] {
   return lastClusterFrames;
+}
+
+/** Рамки по текущим координатам hub-узлов — без сдвига позиций (для LS без relayout). */
+export function syncClusterFramesFromNodes(nodes: SkillNode[]): ClusterFrameSpec[] {
+  const frames: ClusterFrameSpec[] = [];
+  for (const n of nodes) {
+    if (n.hub !== 'hex' && n.hub !== 'diamond') continue;
+    const r = n.hub === 'hex' ? Math.round(HEX_R + HEX_PAD) : Math.round(DIA_R + DIA_PAD);
+    frames.push({
+      id: `${n.hub}_${n.id}`,
+      kind: n.hub,
+      cx: n.x,
+      cy: n.y,
+      r,
+      zone: n.zone,
+      label: n.label,
+      anchorIds: [n.id],
+    });
+  }
+  // Не затирать рамки из applyPoeLayout пустым sync (старые LS без hub-тегов).
+  if (frames.length === 0 && lastClusterFrames.length > 0) return lastClusterFrames;
+  lastClusterFrames = frames;
+  return frames;
 }
 
 type BoardZone = Exclude<ZoneType, 'center'>;
@@ -108,8 +133,11 @@ function resolveSchoolId(
   return null;
 }
 
+/** Ромб-хаб (квель/сигил/аспект-пакет). Имя legacy — packSchool. */
 function isProfessionHub(n: SkillNode): boolean {
-  if (n.hub === 'hex') return true;
+  if (n.hub === 'diamond') return true;
+  if (n.id.startsWith('dia_') || n.id.startsWith('romb_')) return true;
+  // legacy
   if (n.id.startsWith('st_') || n.id.startsWith('prof_')) return true;
   if (n.exclusiveGroup?.startsWith('prof_')) return true;
   return false;
@@ -168,6 +196,7 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
   const pos = new Map<string, { x: number; y: number }>();
   const locked = new Set<string>();
   const draftFrames: ClusterFrameSpec[] = [];
+  const hubKinds = new Map<string, 'hex' | 'diamond'>();
 
   const put = (id: string, x: number, y: number, lock = true) => {
     pos.set(id, { x: snap(x), y: snap(y) });
@@ -176,6 +205,12 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
 
   put('center_start', 0, 0);
   const centerGrid: Array<[string, number, number]> = [
+    // stub v3 характеристики (мастерство в одном круге)
+    ['char_might', 0, -1],
+    ['char_mind', -1, 0],
+    ['char_motor', 1, 0],
+    ['char_core', 0, 1],
+    // legacy center (если вдруг вернём старые узлы)
     ['g_hub', 0, -1],
     ['g_will', -1, -1],
     ['g_grit', 1, -1],
@@ -211,6 +246,7 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
       const off = orbitPos('hex', i, HEX_R);
       put(n.id, cx + off.x, cy + off.y);
     });
+    hubKinds.set(hub.id, 'hex');
     draftFrames.push({
       id: `hex_${hub.id}`,
       kind: 'hex',
@@ -238,6 +274,7 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
       const off = orbitPos('diamond', i, DIA_R);
       put(n.id, cx + off.x, cy + off.y);
     });
+    hubKinds.set(hub.id, 'diamond');
     draftFrames.push({
       id: frameId,
       kind: 'diamond',
@@ -507,7 +544,9 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
 
   const outNodes = nodes.map((n) => {
     const p = pos.get(n.id);
-    return p ? { ...n, x: p.x, y: p.y } : n;
+    const hub = hubKinds.get(n.id);
+    const base = p ? { ...n, x: p.x, y: p.y } : { ...n };
+    return hub ? { ...base, hub } : base;
   });
 
   for (let guard = 0; guard < 80; guard++) {
@@ -539,4 +578,175 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
   return outNodes;
 }
 
-export const applyPoeLayout = applyHighwayLayout;
+/**
+ * Stub v3C — плотный кластер на дар (не размазанная дуга на полкарты).
+ *
+ *   [ромб боевых квелей]  [ромб соц. квелей]
+ *   [гекс боевой]         [гекс социальный]
+ *                 [ДАР]
+ *            ← к центру карты
+ */
+const STUB_HEX_R = CELL * 2.6;
+const STUB_DIA_R = CELL * 2.0;
+const STUB_GIFT = CELL * 5.6;
+const STUB_HEX_FWD = CELL * 4.4;
+const STUB_DIA_FWD = CELL * 10.4; // hexR+diaR+pad ≈ 5.9 CELL → зазор без клипа рамок
+const STUB_SIDE = CELL * 5.2; // combat↔social + соседние зоны не цепляются
+
+export function applyStubV3Layout(source: SkillNode[]): SkillNode[] {
+  const nodes = source.map((n) => ({ ...n }));
+  const pos = new Map<string, { x: number; y: number }>();
+  const frames: ClusterFrameSpec[] = [];
+  const hubKinds = new Map<string, 'hex' | 'diamond'>();
+
+  const put = (id: string, x: number, y: number) => {
+    pos.set(id, { x: snap(x), y: snap(y) });
+  };
+
+  put('center_start', 0, 0);
+  // Характеристики больше не в центре — у своего дара (см. placeGiftExtras).
+
+  const childrenOf = new Map<string, SkillNode[]>();
+  for (const n of nodes) {
+    for (const pid of n.requirements?.parentIds ?? []) {
+      if (!childrenOf.has(pid)) childrenOf.set(pid, []);
+      childrenOf.get(pid)!.push(n);
+    }
+  }
+
+  const zones: BoardZone[] = ['magic', 'strength', 'dexterity', 'wisdom'];
+  const giftAngles: Record<BoardZone, number> = {
+    magic: (-135 * Math.PI) / 180,
+    strength: (-45 * Math.PI) / 180,
+    dexterity: (45 * Math.PI) / 180,
+    wisdom: (135 * Math.PI) / 180,
+  };
+
+  for (const zone of zones) {
+    const gift = nodes.find((n) => n.zone === zone && n.category === 'specialization');
+    if (!gift) continue;
+    const ga = giftAngles[zone];
+    const fx = Math.cos(ga);
+    const fy = Math.sin(ga);
+    const sx = Math.cos(ga + Math.PI / 2);
+    const sy = Math.sin(ga + Math.PI / 2);
+
+    const gx = fx * STUB_GIFT;
+    const gy = fy * STUB_GIFT;
+    put(gift.id, gx, gy);
+
+    // combat = -side, social = +side (стабильный порядок по key в id)
+    const hexCombat = nodes.find((n) => n.id === `hex_${zone}_combat`);
+    const hexSocial = nodes.find((n) => n.id === `hex_${zone}_social`);
+    const diaCombat = nodes.find((n) => n.id === `dia_${zone}_combat_kvel`);
+    const diaSocial = nodes.find((n) => n.id === `dia_${zone}_social_kvel`);
+
+    const placeHex = (hex: SkillNode | undefined, side: number) => {
+      if (!hex) return;
+      const hx = fx * (STUB_GIFT + STUB_HEX_FWD) + sx * side * STUB_SIDE;
+      const hy = fy * (STUB_GIFT + STUB_HEX_FWD) + sy * side * STUB_SIDE;
+      put(hex.id, hx, hy);
+      hubKinds.set(hex.id, 'hex');
+      const skills = (childrenOf.get(hex.id) ?? [])
+        .filter((c) => c.hub !== 'diamond')
+        .sort((a, b) => {
+          const ringOrder = (n: SkillNode) =>
+            n.id.startsWith('sk_') ? 0 : n.category === 'feat' ? 2 : 1;
+          const d = ringOrder(a) - ringOrder(b);
+          return d !== 0 ? d : a.id.localeCompare(b.id);
+        })
+        .slice(0, 6); // гекс = до 6 кругов на орбите
+      const hexR = skills.length > 4 ? STUB_HEX_R * 1.12 : STUB_HEX_R;
+      skills.forEach((sk, si) => {
+        const off = orbitPos('hex', si, hexR);
+        put(sk.id, hx + off.x, hy + off.y);
+      });
+      frames.push({
+        id: `hex_${hex.id}`,
+        kind: 'hex',
+        cx: hx,
+        cy: hy,
+        r: Math.round(hexR + HEX_PAD + 8),
+        zone,
+        label: hex.label,
+        anchorIds: [hex.id, ...skills.map((s) => s.id)],
+      });
+    };
+
+    const placeDia = (dia: SkillNode | undefined, side: number) => {
+      if (!dia) return;
+      const dx = fx * (STUB_GIFT + STUB_DIA_FWD) + sx * side * STUB_SIDE;
+      const dy = fy * (STUB_GIFT + STUB_DIA_FWD) + sy * side * STUB_SIDE;
+      put(dia.id, dx, dy);
+      hubKinds.set(dia.id, 'diamond');
+      const kvels = (childrenOf.get(dia.id) ?? [])
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .slice(0, 4);
+      kvels.forEach((kv, ki) => {
+        const off = orbitPos('diamond', ki, STUB_DIA_R);
+        put(kv.id, dx + off.x, dy + off.y);
+      });
+      frames.push({
+        id: `dia_${dia.id}`,
+        kind: 'diamond',
+        cx: dx,
+        cy: dy,
+        r: Math.round(STUB_DIA_R + DIA_PAD + 8),
+        zone,
+        label: dia.label,
+        anchorIds: [dia.id, ...kvels.map((k) => k.id)],
+      });
+    };
+
+    placeHex(hexCombat, -1);
+    placeHex(hexSocial, 1);
+    placeDia(diaCombat, -1);
+    placeDia(diaSocial, 1);
+
+    // У дара: характеристика + кости. Навыки листа — круги внутри гексов (placeHex).
+    const giftKids = childrenOf.get(gift.id) ?? [];
+    const coreExtras = giftKids
+      .filter(
+        (n) =>
+          n.id.startsWith('char_') ||
+          n.id.startsWith(`sk_${zone}_dice_`),
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
+    coreExtras.forEach((n, i) => {
+      const t = coreExtras.length === 1 ? 0 : (i - (coreExtras.length - 1) / 2) * 0.5;
+      put(n.id, gx + sx * t * CELL * 2.0 - fx * CELL * 1.4, gy + sy * t * CELL * 2.0 - fy * CELL * 1.4);
+    });
+  }
+
+  for (const n of nodes) {
+    if (pos.has(n.id)) continue;
+    // Не кидать «хвосты» рандомом — парковать у своего дара
+    if (n.zone === 'center') {
+      put(n.id, 0, CELL * 2.5);
+      continue;
+    }
+    const a = giftAngles[n.zone as BoardZone] ?? 0;
+    put(n.id, Math.cos(a) * (STUB_GIFT + STUB_DIA_FWD + CELL * 3), Math.sin(a) * (STUB_GIFT + STUB_DIA_FWD + CELL * 3));
+  }
+
+  const outNodes = nodes.map((n) => {
+    const p = pos.get(n.id)!;
+    const hub = hubKinds.get(n.id);
+    const base = { ...n, x: p.x, y: p.y };
+    return hub ? { ...base, hub } : base;
+  });
+
+  lastClusterFrames = frames.map((f) => {
+    const hub = outNodes.find((n) => n.id === f.anchorIds[0]);
+    return hub ? { ...f, cx: hub.x, cy: hub.y } : f;
+  });
+
+  return outNodes;
+}
+
+export function applyPoeLayout(source: SkillNode[]): SkillNode[] {
+  if (source.some((n) => n.id.startsWith('gift_') || n.id.startsWith('hex_'))) {
+    return applyStubV3Layout(source);
+  }
+  return applyHighwayLayout(source);
+}
