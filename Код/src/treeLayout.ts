@@ -592,6 +592,9 @@ const STUB_GIFT = CELL * 5.6;
 const STUB_HEX_FWD = CELL * 4.4;
 const STUB_DIA_FWD = CELL * 10.4; // hexR+diaR+pad ≈ 5.9 CELL → зазор без клипа рамок
 const STUB_SIDE = CELL * 5.2; // combat↔social + соседние зоны не цепляются
+/** Круг-гекс навыков: смещение от дара к центру карты. */
+const STUB_SKILLS_IN = CELL * 2.6; // дар → к центру, пустой зазор на скрине
+const STUB_SKILLS_R = CELL * 2.5;
 
 export function applyStubV3Layout(source: SkillNode[]): SkillNode[] {
   const nodes = source.map((n) => ({ ...n }));
@@ -703,7 +706,7 @@ export function applyStubV3Layout(source: SkillNode[]): SkillNode[] {
     placeDia(diaCombat, -1);
     placeDia(diaSocial, 1);
 
-    // У дара: характеристика + кости. Навыки листа — круги внутри гексов (placeHex).
+    // У дара: характеристика + кости.
     const giftKids = childrenOf.get(gift.id) ?? [];
     const coreExtras = giftKids
       .filter(
@@ -716,6 +719,35 @@ export function applyStubV3Layout(source: SkillNode[]): SkillNode[] {
       const t = coreExtras.length === 1 ? 0 : (i - (coreExtras.length - 1) / 2) * 0.5;
       put(n.id, gx + sx * t * CELL * 2.0 - fx * CELL * 1.4, gy + sy * t * CELL * 2.0 - fy * CELL * 1.4);
     });
+
+    // Круг навыков (как красный круг на скрине): одна фигура к центру от дара.
+    const sheetHex = nodes.find((n) => n.id === `hex_${zone}_skills`);
+    if (sheetHex) {
+      const hx = fx * (STUB_GIFT - STUB_SKILLS_IN);
+      const hy = fy * (STUB_GIFT - STUB_SKILLS_IN);
+      put(sheetHex.id, hx, hy);
+      hubKinds.set(sheetHex.id, 'hex');
+      const skills = (childrenOf.get(sheetHex.id) ?? [])
+        .filter((c) => c.hub !== 'diamond')
+        .sort((a, b) => a.id.localeCompare(b.id));
+      const n = Math.max(1, skills.length);
+      // равномерно по кругу — «фигура круга как гекс»
+      const r = STUB_SKILLS_R * (n <= 6 ? 1 : n <= 9 ? 1.15 : 1.28);
+      skills.forEach((sk, si) => {
+        const a = -Math.PI / 2 + (si / n) * Math.PI * 2;
+        put(sk.id, hx + Math.round(Math.cos(a) * r), hy + Math.round(Math.sin(a) * r));
+      });
+      frames.push({
+        id: `hex_${sheetHex.id}`,
+        kind: 'hex',
+        cx: hx,
+        cy: hy,
+        r: Math.round(r + HEX_PAD + 16),
+        zone,
+        label: sheetHex.label,
+        anchorIds: [sheetHex.id, ...skills.map((s) => s.id)],
+      });
+    }
   }
 
   for (const n of nodes) {

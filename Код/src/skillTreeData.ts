@@ -2,11 +2,11 @@ import type { SkillTreeData, SkillNode, SkillEdge, ZoneType } from './types';
 import { applyPoeLayout } from './treeLayout';
 
 /**
- * STUB v3 map — 2026-09-26 (rev H)
+ * STUB v3 map — 2026-09-27 (rev I)
  * SoT: BRIEF.md + фото листа docs/reference/sheet-skills/
  *
  * Круг = навык/характеристика (мастерство или кость).
- * Гекс = круги навыков листа на орбите + черты (≤6 на кольцо).
+ * Круг-гекс навыков листа = отдельная фигура к центру; боевой/соц = пакеты.
  * Ромб = квели.
  * «Рем:» на листе — не узел. На фото нет Мистики (Разум) и Псионики (Стержень).
  */
@@ -44,7 +44,7 @@ type GiftPack = {
   label: string;
   charId: string;
   charLabel: string;
-  /** Навыки листа → круги внутри гексов (не тропа). */
+  /** Навыки листа → отдельный круг-гекс (к центру от дара). */
   skills: readonly string[];
   diceSkills?: ReadonlyArray<{ slug: string; name: string }>;
   socialHexLabel: string;
@@ -138,37 +138,15 @@ const GIFT_PACKS: readonly GiftPack[] = [
   },
 ];
 
-/** Черты на боевом гексе (заглушки). Навыки листа — круги на орбите гекса. */
-const HEX_COMBAT_TRAITS = ['Черта боя I', 'Черта боя II'] as const;
-const HEX_SOCIAL_TRAITS = ['Черта слова I', 'Черта слова II'] as const;
-
-type HexSkillSplit = { combat: readonly string[]; practical: readonly string[] };
-
-/** Расклад навыков листа по гексам. */
-const SHEET_HEX_SPLIT: Partial<Record<string, HexSkillSplit>> = {
-  gift_snake: {
-    combat: ['Ближний бой', 'Дальний бой', 'Скрытность', 'Воровские Навыки'],
-    practical: [
-      'Ловкость рук',
-      'Печати',
-      'Верховая Езда',
-      'Вождение',
-      'Судовождение',
-      'Пилотирование',
-    ],
-  },
-  gift_zubanya: {
-    combat: ['Выживание', 'Ближний бой'],
-    practical: ['Запугивание', 'Импланты'],
-  },
+/** Заглушки боевого/соц гексов. Навыки листа — отдельный круг-гекс к центру. */
+const HEX_COMBAT = {
+  skills: ['Скил боя I', 'Скил боя II'] as const,
+  traits: ['Черта боя I', 'Черта боя II'] as const,
 };
-
-function splitSheetSkills(g: GiftPack): HexSkillSplit {
-  const explicit = SHEET_HEX_SPLIT[g.id];
-  if (explicit) return explicit;
-  const mid = Math.ceil(g.skills.length / 2);
-  return { combat: g.skills.slice(0, mid), practical: g.skills.slice(mid) };
-}
+const HEX_SOCIAL = {
+  skills: ['Скил слова I', 'Скил слова II'] as const,
+  traits: ['Черта слова I', 'Черта слова II'] as const,
+};
 
 function masteryDesc(name: string): string {
   return (
@@ -200,7 +178,7 @@ const nodes: SkillNode[] = [
     zone: 'center',
     category: 'root',
     cost: { type: 'OR', amount: 0 },
-    description: 'Корень. 4 дара. Навыки = круги внутри гексов. Stub v3H.',
+    description: 'Корень. 4 дара. Навыки листа = круг-гекс. Stub v3I.',
   },
 ];
 
@@ -258,23 +236,58 @@ for (const g of GIFT_PACKS) {
     });
   }
 
-  const sheetSplit = splitSheetSkills(g);
+  // Круг-гекс навыков листа: от дара к центру (как красный круг на скрине).
+  const sheetHexId = `hex_${g.zone}_skills`;
+  nodes.push({
+    id: sheetHexId,
+    x: 0,
+    y: 0,
+    label: 'Навыки',
+    zone: g.zone,
+    category: 'subcategory',
+    hub: 'hex',
+    cost: { type: 'OR', amount: 1 },
+    requirements: {
+      parentIds: [g.charId],
+      requiredSpecialization: { zone: g.zone, level: 1 },
+    },
+    description:
+      `Круг-гекс навыков ${g.label}. Круги мастерства внутри фигуры.`,
+  });
+  g.skills.forEach((name, si) => {
+    nodes.push({
+      id: `sk_${g.zone}_n_${si + 1}_${slugify(name)}`,
+      x: 0,
+      y: 0,
+      label: name,
+      zone: g.zone,
+      category: 'transit_specialized',
+      cost: { type: 'OR', amount: 1 },
+      level: 0,
+      maxLevel: MASTERY_MAX,
+      requirements: {
+        parentIds: [sheetHexId],
+        requiredSpecialization: { zone: g.zone, level: 1 },
+      },
+      description: masteryDesc(name),
+    });
+  });
 
   const packs = [
     {
       key: 'combat',
       hexLabel: 'Боевой',
       diaLabel: 'Боевые квели',
-      sheetSkills: sheetSplit.combat,
-      traits: HEX_COMBAT_TRAITS,
+      skills: HEX_COMBAT.skills,
+      traits: HEX_COMBAT.traits,
       kvels: ['Квель боя I', 'Квель боя II', 'Квель боя III', 'Квель боя IV'],
     },
     {
       key: 'social',
-      hexLabel: g.id === 'gift_snake' ? 'Практика' : g.socialHexLabel,
+      hexLabel: g.socialHexLabel,
       diaLabel: g.socialDiaLabel,
-      sheetSkills: sheetSplit.practical,
-      traits: sheetSplit.practical.length >= 6 ? ([] as const) : HEX_SOCIAL_TRAITS,
+      skills: HEX_SOCIAL.skills,
+      traits: HEX_SOCIAL.traits,
       kvels: ['Квель слова I', 'Квель слова II', 'Квель слова III', 'Квель слова IV'],
     },
   ] as const;
@@ -293,13 +306,12 @@ for (const g of GIFT_PACKS) {
         parentIds: [g.id],
         requiredSpecialization: { zone: g.zone, level: 1 },
       },
-      description:
-        `Гекс «${p.hexLabel}» ${g.label}. Круги навыков на орбите внутри гекса.`,
+      description: `Гекс «${p.hexLabel}» ${g.label}. Скилы и черты. Заглушки.`,
     });
 
-    p.sheetSkills.forEach((name, si) => {
+    p.skills.forEach((name, si) => {
       nodes.push({
-        id: `sk_${g.zone}_${p.key}_${si + 1}_${slugify(name)}`,
+        id: `hexsk_${g.zone}_${p.key}_${si + 1}`,
         x: 0,
         y: 0,
         label: name,
@@ -312,7 +324,7 @@ for (const g of GIFT_PACKS) {
           parentIds: [hexId],
           requiredSpecialization: { zone: g.zone, level: 1 },
         },
-        description: masteryDesc(name),
+        description: `${name}. Скил гекса. Мастерство в круге. Текст позже.`,
       });
     });
 
