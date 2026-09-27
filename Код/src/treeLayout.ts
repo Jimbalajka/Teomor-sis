@@ -22,7 +22,7 @@ const DIA_PAD = 52;
 
 export type ClusterFrameSpec = {
   id: string;
-  kind: 'hex' | 'diamond';
+  kind: 'hex' | 'diamond' | 'circle';
   cx: number;
   cy: number;
   r: number;
@@ -41,8 +41,13 @@ export function getClusterFrames(_nodes?: SkillNode[]): ClusterFrameSpec[] {
 export function syncClusterFramesFromNodes(nodes: SkillNode[]): ClusterFrameSpec[] {
   const frames: ClusterFrameSpec[] = [];
   for (const n of nodes) {
-    if (n.hub !== 'hex' && n.hub !== 'diamond') continue;
-    const r = n.hub === 'hex' ? Math.round(HEX_R + HEX_PAD) : Math.round(DIA_R + DIA_PAD);
+    if (n.hub !== 'hex' && n.hub !== 'diamond' && n.hub !== 'circle') continue;
+    const r =
+      n.hub === 'hex'
+        ? Math.round(HEX_R + HEX_PAD)
+        : n.hub === 'circle'
+          ? Math.round(HEX_R + HEX_PAD)
+          : Math.round(DIA_R + DIA_PAD);
     frames.push({
       id: `${n.hub}_${n.id}`,
       kind: n.hub,
@@ -196,7 +201,7 @@ export function applyHighwayLayout(source: SkillNode[]): SkillNode[] {
   const pos = new Map<string, { x: number; y: number }>();
   const locked = new Set<string>();
   const draftFrames: ClusterFrameSpec[] = [];
-  const hubKinds = new Map<string, 'hex' | 'diamond'>();
+  const hubKinds = new Map<string, 'hex' | 'diamond' | 'circle'>();
 
   const put = (id: string, x: number, y: number, lock = true) => {
     pos.set(id, { x: snap(x), y: snap(y) });
@@ -592,15 +597,16 @@ const STUB_GIFT = CELL * 5.6;
 const STUB_HEX_FWD = CELL * 4.4;
 const STUB_DIA_FWD = CELL * 10.4; // hexR+diaR+pad ≈ 5.9 CELL → зазор без клипа рамок
 const STUB_SIDE = CELL * 5.2; // combat↔social + соседние зоны не цепляются
-/** Гекс навыков: на луче зоны, между двумя ромбами или чуть дальше. */
+/** Круг навыков: на луче зоны, между двумя ромбами или чуть дальше. */
 const STUB_SKILLS_FWD = STUB_GIFT + STUB_DIA_FWD + CELL * 1.2;
-const STUB_SKILLS_R = CELL * 2.6;
+/** Одна орбита, компактно — не две кольца. */
+const STUB_SKILLS_R = CELL * 1.85;
 
 export function applyStubV3Layout(source: SkillNode[]): SkillNode[] {
   const nodes = source.map((n) => ({ ...n }));
   const pos = new Map<string, { x: number; y: number }>();
   const frames: ClusterFrameSpec[] = [];
-  const hubKinds = new Map<string, 'hex' | 'diamond'>();
+  const hubKinds = new Map<string, 'hex' | 'diamond' | 'circle'>();
 
   const put = (id: string, x: number, y: number) => {
     pos.set(id, { x: snap(x), y: snap(y) });
@@ -720,38 +726,35 @@ export function applyStubV3Layout(source: SkillNode[]): SkillNode[] {
       put(n.id, gx + sx * t * CELL * 2.0 - fx * CELL * 1.4, gy + sy * t * CELL * 2.0 - fy * CELL * 1.4);
     });
 
-    // Гекс навыков: от центра по лучу зоны, между двумя ромбами (чуть дальше).
-    const sheetHex = nodes.find((n) => n.id === `hex_${zone}_skills`);
-    if (sheetHex) {
+    // Круг навыков: между ромбами / чуть дальше. Одна орбита, равномерно.
+    const sheetCircle = nodes.find((n) => n.id === `hex_${zone}_skills`);
+    if (sheetCircle) {
       const hx = fx * STUB_SKILLS_FWD;
       const hy = fy * STUB_SKILLS_FWD;
-      put(sheetHex.id, hx, hy);
-      hubKinds.set(sheetHex.id, 'hex');
-      const skills = (childrenOf.get(sheetHex.id) ?? [])
-        .filter((c) => c.hub !== 'diamond')
+      put(sheetCircle.id, hx, hy);
+      hubKinds.set(sheetCircle.id, 'circle');
+      const skills = (childrenOf.get(sheetCircle.id) ?? [])
+        .filter((c) => c.hub !== 'diamond' && c.hub !== 'hex')
         .sort((a, b) => a.id.localeCompare(b.id));
-      // орбита ГЕКСА (не круг): до 6 на 1-м кольце, остаток на 2-м
-      const ring1 = skills.slice(0, 6);
-      const ring2 = skills.slice(6, 12);
-      const r1 = ring2.length ? STUB_SKILLS_R * 0.95 : STUB_SKILLS_R;
-      const r2 = STUB_SKILLS_R * 1.65;
-      ring1.forEach((sk, si) => {
-        const off = orbitPos('hex', si, r1);
-        put(sk.id, hx + off.x, hy + off.y);
-      });
-      ring2.forEach((sk, si) => {
-        const off = orbitPos('hex', si, r2);
-        put(sk.id, hx + off.x, hy + off.y);
+      const n = Math.max(1, skills.length);
+      const rOrbit = STUB_SKILLS_R * (n <= 6 ? 1 : n <= 8 ? 1.08 : 1.16);
+      skills.forEach((sk, si) => {
+        const a = -Math.PI / 2 + (si / n) * Math.PI * 2;
+        put(
+          sk.id,
+          hx + Math.round(Math.cos(a) * rOrbit),
+          hy + Math.round(Math.sin(a) * rOrbit),
+        );
       });
       frames.push({
-        id: `hex_${sheetHex.id}`,
-        kind: 'hex',
+        id: `circle_${sheetCircle.id}`,
+        kind: 'circle',
         cx: hx,
         cy: hy,
-        r: Math.round((ring2.length ? r2 : r1) + HEX_PAD + 12),
+        r: Math.round(rOrbit + HEX_PAD * 0.7),
         zone,
-        label: sheetHex.label,
-        anchorIds: [sheetHex.id, ...skills.map((s) => s.id)],
+        label: sheetCircle.label,
+        anchorIds: [sheetCircle.id, ...skills.map((s) => s.id)],
       });
     }
   }

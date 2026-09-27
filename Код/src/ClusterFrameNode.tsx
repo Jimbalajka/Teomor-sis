@@ -73,27 +73,55 @@ export function ClusterFramesLayer() {
           const cx = f.cx - minX;
           const cy = f.cy - minY;
           const r = f.r;
-          const points =
-            f.kind === 'hex' ? hexPoints(cx, cy, r - 2) : diamondPoints(cx, cy, r - 2);
+          const glow = { filter: `drop-shadow(0 0 10px ${stroke}66)` } as const;
           return (
             <g key={f.id} opacity={1}>
-              <polygon
-                points={points}
-                fill={`${stroke}22`}
-                stroke={stroke}
-                strokeWidth={f.kind === 'hex' ? 3.25 : 2.75}
-                strokeDasharray={f.kind === 'diamond' ? '7 5' : undefined}
-                strokeLinejoin="round"
-                style={{ filter: `drop-shadow(0 0 10px ${stroke}66)` }}
-              />
-              {f.kind === 'hex' && (
-                <polygon
-                  points={hexPoints(cx, cy, r * 0.28)}
-                  fill={`${stroke}10`}
-                  stroke={stroke}
-                  strokeWidth={1.25}
-                  opacity={0.55}
-                />
+              {f.kind === 'circle' ? (
+                <>
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={r - 2}
+                    fill={`${stroke}22`}
+                    stroke={stroke}
+                    strokeWidth={3.25}
+                    style={glow}
+                  />
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={r * 0.22}
+                    fill={`${stroke}10`}
+                    stroke={stroke}
+                    strokeWidth={1.25}
+                    opacity={0.55}
+                  />
+                </>
+              ) : (
+                <>
+                  <polygon
+                    points={
+                      f.kind === 'hex'
+                        ? hexPoints(cx, cy, r - 2)
+                        : diamondPoints(cx, cy, r - 2)
+                    }
+                    fill={`${stroke}22`}
+                    stroke={stroke}
+                    strokeWidth={f.kind === 'hex' ? 3.25 : 2.75}
+                    strokeDasharray={f.kind === 'diamond' ? '7 5' : undefined}
+                    strokeLinejoin="round"
+                    style={glow}
+                  />
+                  {f.kind === 'hex' && (
+                    <polygon
+                      points={hexPoints(cx, cy, r * 0.28)}
+                      fill={`${stroke}10`}
+                      stroke={stroke}
+                      strokeWidth={1.25}
+                      opacity={0.55}
+                    />
+                  )}
+                </>
               )}
               {f.label && (
                 <text

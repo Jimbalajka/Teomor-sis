@@ -41,7 +41,7 @@ const HIGHWAY_CATS = new Set([
 function isGiftHubSpine(a: SkillNode, b: SkillNode): boolean {
   const giftHub = (g: SkillNode, h: SkillNode) =>
     g.category === 'specialization' &&
-    (h.hub === 'hex' || h.hub === 'diamond' || h.category === 'subcategory');
+    (h.hub === 'hex' || h.hub === 'diamond' || h.hub === 'circle' || h.category === 'subcategory');
   return giftHub(a, b) || giftHub(b, a);
 }
 
@@ -79,8 +79,10 @@ function isHighwayEdge(a?: SkillNode, b?: SkillNode): boolean {
     HIGHWAY_CATS.has(b.category) ||
     a.hub === 'hex' ||
     a.hub === 'diamond' ||
+    a.hub === 'circle' ||
     b.hub === 'hex' ||
-    b.hub === 'diamond';
+    b.hub === 'diamond' ||
+    b.hub === 'circle';
   return spine;
 }
 

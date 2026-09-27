@@ -2,11 +2,11 @@ import type { SkillTreeData, SkillNode, SkillEdge, ZoneType } from './types';
 import { applyPoeLayout } from './treeLayout';
 
 /**
- * STUB v3 map — 2026-09-27 (rev J)
+ * STUB v3 map — 2026-09-27 (rev K)
  * SoT: BRIEF.md + фото листа docs/reference/sheet-skills/
  *
  * Круг = навык/характеристика (мастерство или кость).
- * Гекс навыков листа = между ромбами зоны; боевой/соц = пакеты.
+ * Круг навыков листа = между ромбами; одна орбита; боевой/соц = гекс-пакеты.
  * Ромб = квели.
  * «Рем:» на листе — не узел. На фото нет Мистики (Разум) и Псионики (Стержень).
  */
@@ -44,7 +44,7 @@ type GiftPack = {
   label: string;
   charId: string;
   charLabel: string;
-  /** Навыки листа → отдельный гекс между ромбами зоны. */
+  /** Навыки листа → отдельный КРУГ между ромбами зоны. */
   skills: readonly string[];
   diceSkills?: ReadonlyArray<{ slug: string; name: string }>;
   socialHexLabel: string;
@@ -138,7 +138,7 @@ const GIFT_PACKS: readonly GiftPack[] = [
   },
 ];
 
-/** Заглушки боевого/соц гексов. Навыки листа — отдельный круг-гекс к центру. */
+/** Заглушки боевого/соц гексов. Навыки листа — отдельный круг между ромбами. */
 const HEX_COMBAT = {
   skills: ['Скил боя I', 'Скил боя II'] as const,
   traits: ['Черта боя I', 'Черта боя II'] as const,
@@ -178,7 +178,7 @@ const nodes: SkillNode[] = [
     zone: 'center',
     category: 'root',
     cost: { type: 'OR', amount: 0 },
-    description: 'Корень. 4 дара. Навыки листа = круг-гекс. Stub v3J.',
+    description: 'Корень. 4 дара. Навыки листа = круг. Stub v3K.',
   },
 ];
 
@@ -245,14 +245,14 @@ for (const g of GIFT_PACKS) {
     label: 'Навыки',
     zone: g.zone,
     category: 'subcategory',
-    hub: 'hex',
+    hub: 'circle',
     cost: { type: 'OR', amount: 1 },
     requirements: {
       parentIds: [g.charId],
       requiredSpecialization: { zone: g.zone, level: 1 },
     },
     description:
-      `Гекс навыков ${g.label}. Круги мастерства на орбите гекса.`,
+      `Круг навыков ${g.label}. Одна орбита, равномерно.`,
   });
   g.skills.forEach((name, si) => {
     nodes.push({
